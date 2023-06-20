@@ -1,0 +1,29 @@
+[package]
+name = "aggy_api"
+version.workspace = true
+edition.workspace = true
+default-run = "web"
+
+[[bin]]
+name = "web"
+test = false
+bench = false
+
+[[bin]]
+name = "print_oas"
+test = false
+bench = false
+
+[features]
+default = ["dylink"]
+
+[dependencies]
+deps = { workspace = true }
+dylink = { workspace = true, optional = true }
+
+shadow-rs = { workspace = true }
+validator = { workspace = true }
+sqlx = { workspace = true }
+
+[build-dependencies]
+shadow-rs = { workspace = true }

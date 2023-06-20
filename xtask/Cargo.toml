@@ -1,0 +1,19 @@
+[package]
+name = "xtask"
+version.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "xtask"
+path = "main.rs"
+
+[dependencies]
+clap = { version = "4.3.4", features = [
+  "derive",
+  "env",
+  "unicode",
+  "wrap_help",
+  "cargo",
+] }
+dotenvy = "0.15"
+once_cell = "*"

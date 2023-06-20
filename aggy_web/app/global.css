@@ -1,0 +1,57 @@
+@unocss;
+
+:root {
+  @apply outline-outline;
+}
+
+h1 {
+  @apply text-4xl font-800;
+}
+
+h2 {
+  @apply text-3xl font-700;
+}
+
+h3 {
+  @apply text-2xl font-600;
+}
+
+h3 {
+  @apply text-xl font-500;
+}
+
+body {
+  @apply mat-backg;
+}
+
+::marker {
+  /* content: ' 🧺  '; */
+  /* white-space: nowrap ; */
+}
+
+::selection {
+  @apply mat-secondary;
+}
+
+input:focus,  textarea:focus {
+  outline: none;
+}
+textarea {
+  @apply min-h-3rem;
+}
+
+.divider {
+  @apply 
+        bg-outlinev 
+        dark:bg-dark-outlinev 
+        data-[orientation=horizontal]:h-1px 
+        data-[orientation=horizontal]:w-100%
+        data-[orientation=vertical]:w-1px 
+        data-[orientation=vertical]:h-100%;
+}
+
+.btn {
+  @apply 
+    py-1 px-4 font-800 font-xl rounded-2
+    hover:(outline outline-1) ;
+}

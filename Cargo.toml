@@ -1,0 +1,39 @@
+[workspace]
+resolver = "2"
+members = ["deps/", "dylink/", "xtask/", "common/", "aggy_api/"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+
+[profile.xtask]
+inherits = 'dev'
+opt-level = 0
+debug = 0
+
+[profile.xtask.package."*"]
+opt-level = 0
+debug = 0
+
+[patch.crates-io]
+
+[workspace.dependencies]
+
+# external
+shadow-rs = "0.23.0"
+# the following contain macros that don't like being re-exported
+validator = { version = "0.16", features = ["derive"] }
+sqlx = { version = "0.6", features = [
+  "postgres",
+  "runtime-tokio-rustls",
+  "time",
+  "uuid",
+  "macros",
+  "json",
+  "migrate",
+  "offline",
+] }
+
+# internal
+deps = { path = "deps/" }
+dylink = { path = "dylink/" }

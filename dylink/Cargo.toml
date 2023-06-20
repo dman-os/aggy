@@ -1,0 +1,11 @@
+[package]
+name = "dylink"
+version.workspace = true
+edition.workspace = true
+
+[lib]
+crate-type = ["dylib"]
+path = "lib.rs"
+
+[dependencies]
+deps = { workspace = true }
