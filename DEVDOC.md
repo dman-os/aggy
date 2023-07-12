@@ -15,11 +15,15 @@
 - [ ] Logging
 - [ ] Replace UUIDs with HashIDs for user id
 
+- [ ] Consider SurrealDb
+
 ## design-doc
 
 ### Features
 
 ### Endpoints
+
+#### Aggy
 
 - [ ] User
   - [ ] Get
@@ -27,6 +31,21 @@
   - [ ] Update
   - [ ] Delete
   - [ ] List
+
+##### Epigram
+
+- [ ] Epigram
+  - [ ] Get
+  - [ ] Create
+  - [ ] Update
+  - [ ] Delete
+  - [ ] List
+- [ ] Submit Epigram
+- [ ] Read Epigram
+- [ ] Read children epigrams
+- [ ] Confirm Epigram Email
+
+##### Doface
 
 ## dev-log
 

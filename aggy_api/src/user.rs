@@ -26,7 +26,7 @@ pub use list::UserSortingField;
 pub static USERNAME_REGEX: Lazy<regex::Regex> =
     Lazy::new(|| regex::Regex::new(r"^[a-zA-Z0-9]+([_-]?[a-zA-Z0-9])*$").unwrap());
 
-pub const TAG: crate::Tag = crate::Tag {
+pub const TAG: common::Tag = common::Tag {
     name: "user",
     desc: "Manipulate User objects.",
 };
@@ -64,25 +64,26 @@ pub fn components(
 }
 
 pub fn paths(builder: utoipa::openapi::PathsBuilder) -> utoipa::openapi::PathsBuilder {
+    use common::axum_path_str_to_openapi;
     builder
         .path(
-            crate::axum_path_str_to_openapi(get::GetUser::PATH),
+            axum_path_str_to_openapi(get::GetUser::PATH),
             get::GetUser::path_item(),
         )
         .path(
-            crate::axum_path_str_to_openapi(update::UpdateUser::PATH),
+            axum_path_str_to_openapi(update::UpdateUser::PATH),
             update::UpdateUser::path_item(),
         )
         .path(
-            crate::axum_path_str_to_openapi(delete::DeleteUser::PATH),
+            axum_path_str_to_openapi(delete::DeleteUser::PATH),
             delete::DeleteUser::path_item(),
         )
         .path(
-            crate::axum_path_str_to_openapi(create::CreateUser::PATH),
+            axum_path_str_to_openapi(create::CreateUser::PATH),
             create::CreateUser::path_item(),
         )
         .path(
-            crate::axum_path_str_to_openapi(list::ListUsers::PATH),
+            axum_path_str_to_openapi(list::ListUsers::PATH),
             list::ListUsers::path_item(),
         )
 }

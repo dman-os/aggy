@@ -1,11 +1,8 @@
 use deps::*;
 
-pub use crate::auth::testing::*;
 pub use axum::http;
 pub use axum::http::StatusCode;
 pub use tower::ServiceExt;
-
-use crate::{Context, SharedContext};
 
 pub fn setup_tracing() -> eyre::Result<()> {
     color_eyre::install()?;
@@ -36,7 +33,7 @@ pub fn setup_tracing_once() {
 }
 
 pub struct ExtraAssertionAgs<'a> {
-    pub cx: &'a mut TestContext,
+    pub test_cx: &'a mut TestContext,
     pub auth_token: Option<String>,
     pub response_head: axum::http::response::Parts,
     pub response_json: Option<serde_json::Value>,
@@ -51,21 +48,16 @@ pub type ExtraAssertions<'c, 'f> = dyn Fn(ExtraAssertionAgs<'c>) -> LocalBoxFutu
 
 pub struct TestContext {
     pub test_name: String,
-    cx: Option<SharedContext>,
+    pub db_pool: Option<sqlx::postgres::PgPool>,
     // clean_up_closure: Option<Box<dyn FnOnce(Context) -> ()>>,
-    clean_up_closure: Option<Box<dyn FnOnce(Context) -> futures::future::BoxFuture<'static, ()>>>,
+    clean_up_closure:
+        Option<Box<dyn FnOnce(sqlx::postgres::PgPool) -> futures::future::BoxFuture<'static, ()>>>,
 }
 
 impl TestContext {
     pub async fn new(test_name: &'static str) -> Self {
         setup_tracing_once();
         let test_name = test_name.replace("::tests::", "").replace("::", "_");
-
-        let config = crate::Config {
-            pass_salt_hash: b"sea brine".to_vec(),
-            argon2_conf: argon2::Config::default(),
-            auth_token_lifespan: time::Duration::seconds_f64(60. * 60. * 24. * 30.),
-        };
 
         use sqlx::prelude::*;
         let opts = sqlx::postgres::PgConnectOptions::default()
@@ -115,24 +107,28 @@ impl TestContext {
             .await
             .expect("Failed to connect to Postgres as test db.");
 
-        sqlx::migrate!("./migrations")
+        // sqlx::migrate!("./migrations")
+        sqlx::migrate::Migrator::new(std::path::Path::new("./migrations"))
+            .await
+            .expect("error setting up migrator for ./migrations")
             .run(&db_pool)
             .await
             .expect("Failed to migrate the database");
-
-        sqlx::migrate!("./fixtures")
+        // sqlx::migrate!("./fixtures")
+        sqlx::migrate::Migrator::new(std::path::Path::new("./fixtures"))
+            .await
+            .expect("error setting up migrator for ./fixtures")
             .set_ignore_missing(true) // don't inspect migrations store
             .run(&db_pool)
             .await
             .expect("Failed to add test data");
 
-        let cx = Context { db_pool, config };
         Self {
             test_name: test_name.clone(), // someone needs it downwind
-            cx: Some(std::sync::Arc::new(cx)),
-            clean_up_closure: Some(Box::new(move |cx| {
+            db_pool: Some(db_pool),
+            clean_up_closure: Some(Box::new(move |db_pool| {
                 Box::pin(async move {
-                    cx.db_pool.close().await;
+                    db_pool.close().await;
                     connection
                         .execute(&format!(r###"DROP DATABASE {test_name}"###)[..])
                         .await
@@ -142,15 +138,10 @@ impl TestContext {
         }
     }
 
-    pub fn cx(&self) -> SharedContext {
-        self.cx.clone().unwrap_or_log()
-    }
-
     /// Call this after all holders of the [`SharedContext`] have been dropped.
     pub async fn close(mut self) {
-        let cx = self.cx.take().unwrap_or_log();
-        let cx = std::sync::Arc::<_>::try_unwrap(cx).unwrap_or_log();
-        (self.clean_up_closure.take().unwrap())(cx);
+        let db_pool = self.db_pool.take().unwrap_or_log();
+        (self.clean_up_closure.take().unwrap())(db_pool);
     }
     /* pub async fn new_with_service<F>(
         test_name: &'static str,
@@ -172,7 +163,7 @@ impl TestContext {
 
 impl Drop for TestContext {
     fn drop(&mut self) {
-        if self.cx.is_some() {
+        if self.db_pool.is_some() {
             tracing::warn!(
                 "test context dropped without cleaning up for: {}",
                 self.test_name

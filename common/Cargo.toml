@@ -5,3 +5,5 @@ edition.workspace = true
 
 [dependencies]
 deps = { workspace = true }
+validator = { workspace = true }
+sqlx = { workspace = true }

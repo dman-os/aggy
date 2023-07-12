@@ -27,7 +27,7 @@ pub enum Role {
     SuperAdmin,
 }
 
-pub const TAG: crate::Tag = crate::Tag {
+pub const TAG: common::Tag = common::Tag {
     name: "auth",
     desc: "The authentication and authorization services.",
 };
@@ -48,7 +48,7 @@ pub fn components(
 
 pub fn paths(builder: utoipa::openapi::PathsBuilder) -> utoipa::openapi::PathsBuilder {
     builder.path(
-        crate::axum_path_str_to_openapi(authenticate::Authenticate::PATH),
+        common::axum_path_str_to_openapi(authenticate::Authenticate::PATH),
         authenticate::Authenticate::path_item(),
     )
 }

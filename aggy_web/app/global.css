@@ -55,3 +55,22 @@ textarea {
     py-1 px-4 font-800 font-xl rounded-2
     hover:(outline outline-1) ;
 }
+
+main {
+    width: min(100% - 3rem, 65ch);
+    margin-inline: auto;
+    margin-top: 2em;
+    margin-bottom: 2em;
+}
+
+ol  {
+  @apply list-decimal pl-2rem;
+}
+
+ul  {
+  @apply list-disc pl-1;
+}
+
+a {
+  @apply hover:underline;
+}

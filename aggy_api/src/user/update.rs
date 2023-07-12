@@ -1,7 +1,4 @@
-use deps::*;
-
-use crate::utils::*;
-use crate::*;
+use crate::interlude::*;
 
 use serde::{Deserialize, Serialize};
 use validator::Validate;
@@ -63,6 +60,7 @@ impl AuthenticatedEndpoint for UpdateUser {
     type Request = Request;
     type Response = Response;
     type Error = Error;
+    type Cx = Context;
 
     fn authorize_request(&self, request: &Self::Request) -> crate::auth::authorize::Request {
         crate::auth::authorize::Request {
@@ -77,11 +75,11 @@ impl AuthenticatedEndpoint for UpdateUser {
     #[tracing::instrument(skip(cx))]
     async fn handle(
         &self,
-        cx: &crate::Context,
+        cx: &Self::Cx,
         accessing_user: uuid::Uuid,
         request: Self::Request,
     ) -> Result<Self::Response, Self::Error> {
-        validator::Validate::validate(&request).map_err(utils::ValidationErrors::from)?;
+        validator::Validate::validate(&request).map_err(ValidationErrors::from)?;
         if request.is_empty() {
             return AuthenticatedEndpoint::handle(
                 &crate::user::get::GetUser,
@@ -94,9 +92,9 @@ impl AuthenticatedEndpoint for UpdateUser {
             )
             .await
             .map_err(|err| match err {
-                user::get::Error::NotFound { id } => Error::NotFound { id },
-                user::get::Error::AccessDenied => Error::AccessDenied,
-                user::get::Error::Internal { message } => Error::Internal { message },
+                crate::user::get::Error::NotFound { id } => Error::NotFound { id },
+                crate::user::get::Error::AccessDenied => Error::AccessDenied,
+                crate::user::get::Error::Internal { message } => Error::Internal { message },
             });
         }
         let pass_hash = request.password.map(|pass| {
@@ -178,6 +176,7 @@ impl HttpEndpoint for UpdateUser {
     const METHOD: Method = Method::Patch;
     const PATH: &'static str = "/users/:id";
 
+    type SharedCx = SharedContext;
     type HttpRequest = (TypedHeader<BearerToken>, Path<uuid::Uuid>, Json<Request>);
 
     fn request(
@@ -270,12 +269,11 @@ impl DocumentedEndpoint for UpdateUser {
 
 #[cfg(test)]
 mod tests {
-    use deps::*;
+    use crate::interlude::*;
 
     use super::Request;
 
     use crate::user::testing::*;
-    use crate::utils::testing::*;
 
     // fn fixture_request() -> Request {
     //     serde_json::from_value(fixture_request_json()).unwrap()
@@ -301,7 +299,7 @@ mod tests {
         })
     }
 
-    crate::table_tests! {
+    common::table_tests! {
         update_user_validate,
         (request, err_field),
         {
@@ -373,13 +371,14 @@ mod tests {
         )*) => {
             mod integ {
                 use super::*;
-                crate::integration_table_tests! {
+                common::integration_table_tests! {
                     $(
                         $name: {
                             uri: $uri,
                             method: "PATCH",
                             status: $status,
                             router: crate::user::router(),
+                            state_fn: crate::utils::testing::state_fn,
                             body: $json_body,
                             $(check_json: $check_json,)?
                             auth_token: $auth_token,
@@ -399,8 +398,9 @@ mod tests {
             status: http::StatusCode::OK,
             body: fixture_request_json(),
             check_json: fixture_request_json().remove_keys_from_obj(&["password"]),
-            extra_assertions: &|EAArgs { cx, response_json, .. }| {
+            extra_assertions: &|EAArgs { test_cx, response_json, .. }| {
                 Box::pin(async move {
+                    let cx = state_fn(test_cx);
                     let req_body_json = fixture_request_json();
                     let resp_body_json = response_json.unwrap();
                     tracing::info!(?resp_body_json);
@@ -408,7 +408,7 @@ mod tests {
                         resp_body_json["updatedAt"].as_i64().unwrap() >
                         resp_body_json["createdAt"].as_i64().unwrap()
                     );
-                    let app = crate::user::router().with_state(cx.cx());
+                    let app = crate::user::router().with_state(cx);
                     let resp = app
                         .oneshot(
                             http::Request::builder()

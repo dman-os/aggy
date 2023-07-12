@@ -1,40 +1,19 @@
 pub use list_request::*;
 mod list_request;
 
-pub use validation_errs::*;
-mod validation_errs;
-
 #[cfg(test)]
-pub mod testing;
+pub mod testing {
 
-/// This baby doesn't work on generic types
-pub fn type_name_raw<T>() -> &'static str {
-    let name = std::any::type_name::<T>();
-    match &name.rfind(':') {
-        Some(pos) => &name[pos + 1..name.len()],
-        None => name,
+    use deps::*;
+
+    pub fn state_fn(testing: &common::utils::testing::TestContext) -> crate::SharedContext {
+        std::sync::Arc::new(crate::Context {
+            db_pool: testing.db_pool.clone().unwrap(),
+            config: crate::Config {
+                pass_salt_hash: b"sea brine".to_vec(),
+                argon2_conf: argon2::Config::default(),
+                auth_token_lifespan: time::Duration::seconds_f64(60. * 60. * 24. * 30.),
+            },
+        })
     }
 }
-
-#[test]
-fn test_type_name_macro() {
-    struct Foo {}
-    assert_eq!("Foo", type_name_raw::<Foo>());
-}
-
-/*
-/// Serde deserialization decorator to map empty Strings to None,
-fn empty_string_as_none<'de, D, T>(de: D) -> Result<Option<T>, D::Error>
-where
-    D: serde::Deserializer<'de>,
-    T: std::str::FromStr,
-    T::Err: std::fmt::Display,
-{
-    use serde::Deserialize;
-    let opt = Option::<String>::deserialize(de)?;
-    match opt.as_deref() {
-        None | Some("") => Ok(None),
-        Some(s) => std::str::FromStr::from_str(s).map_err(serde::de::Error::custom).map(Some),
-    }
-}
-*/

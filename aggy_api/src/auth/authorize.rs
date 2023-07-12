@@ -5,9 +5,6 @@ use crate::interlude::*;
 
 use crate::auth::{Action, Resource};
 
-#[derive(Clone, Copy, Debug)]
-pub struct Authorize;
-
 #[derive(Debug)]
 pub struct Request {
     pub auth_token: BearerToken,
@@ -27,17 +24,13 @@ pub enum Error {
 }
 
 #[async_trait::async_trait]
-impl crate::Endpoint for Authorize {
+impl common::Authorize for crate::Context {
+    type Info = uuid::Uuid;
     type Request = Request;
-    type Response = uuid::Uuid;
     type Error = Error;
 
-    #[tracing::instrument(skip(cx))]
-    async fn handle(
-        &self,
-        cx: &crate::Context,
-        request: Self::Request,
-    ) -> Result<Self::Response, Self::Error> {
+    #[tracing::instrument(skip(self))]
+    async fn authorize(&self, request: Self::Request) -> Result<Self::Info, Self::Error> {
         // TODO: roles support
         // TODO: cache db access
         let session = sqlx::query_as!(
@@ -49,7 +42,7 @@ WHERE token = $1
             "#,
             &request.auth_token.token()
         )
-        .fetch_one(&cx.db_pool)
+        .fetch_one(&self.db_pool)
         .await
         .map_err(|err| match err {
             sqlx::Error::RowNotFound => Error::InvalidToken,
@@ -68,22 +61,23 @@ WHERE token = $1
 mod tests {
     // use deps::*;
 
-    use crate::auth::*;
-    use crate::utils::testing::*;
-    use crate::{user::testing::*, Endpoint};
+    use crate::interlude::*;
 
-    crate::table_tests! {
+    use crate::{auth::*, user::testing::*, Endpoint};
+
+    common::table_tests! {
         authorize_policy tokio,
         (username, id, resource_actions),
         {
-            let cx = TestContext::new(crate::function!()).await;
-            {
-                let res = authenticate::Authenticate.handle(&cx.cx(), authenticate::Request{
+        let test_cx = TestContext::new(common::function!()).await;
+        {
+            let cx = state_fn(&test_cx);
+                let res = authenticate::Authenticate.handle(&cx, authenticate::Request{
                     identifier: username.to_string(),
                     password: "password".into()
                 }).await.unwrap_or_log();
                 for (resource, action) in resource_actions {
-                    let user_id = authorize::Authorize.handle(&cx.cx(), authorize::Request {
+                    let user_id = cx.authorize(authorize::Request {
                         auth_token: BearerToken::bearer(&res.token[..]).unwrap_or_log(),
                         resource,
                         action
@@ -91,7 +85,7 @@ mod tests {
                     assert_eq!(id, user_id);
                 }
             }
-            cx.close().await;
+            test_cx.close().await;
         },
     }
 

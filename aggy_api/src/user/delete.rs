@@ -1,8 +1,4 @@
-use deps::*;
-
-use axum::extract::*;
-
-use crate::*;
+use crate::interlude::*;
 
 #[derive(Clone, Copy, Debug)]
 pub struct DeleteUser;
@@ -24,13 +20,14 @@ pub enum Error {
 
 crate::impl_from_auth_err!(Error);
 
-pub type Response = NoContent;
+pub type Response = common::NoContent;
 
 #[async_trait::async_trait]
 impl crate::AuthenticatedEndpoint for DeleteUser {
     type Request = Request;
     type Response = Response;
     type Error = Error;
+    type Cx = Context;
 
     fn authorize_request(&self, request: &Self::Request) -> crate::auth::authorize::Request {
         crate::auth::authorize::Request {
@@ -43,7 +40,7 @@ impl crate::AuthenticatedEndpoint for DeleteUser {
     #[tracing::instrument(skip(cx))]
     async fn handle(
         &self,
-        cx: &crate::Context,
+        cx: &Self::Cx,
         _accessing_user: uuid::Uuid,
         request: Self::Request,
     ) -> Result<Self::Response, Self::Error> {
@@ -61,7 +58,7 @@ SELECT delete_user($1)
             message: format!("db error: {err}"),
         })?;
         tracing::trace!(?was_deleted);
-        Ok(NoContent)
+        Ok(common::NoContent)
     }
 }
 
@@ -80,6 +77,7 @@ impl HttpEndpoint for DeleteUser {
     const PATH: &'static str = "/users/:id";
     const SUCCESS_CODE: StatusCode = StatusCode::NO_CONTENT;
 
+    type SharedCx = SharedContext;
     type HttpRequest = (TypedHeader<BearerToken>, Path<uuid::Uuid>, DiscardBody);
 
     fn request(
@@ -114,10 +112,9 @@ impl DocumentedEndpoint for DeleteUser {
 
 #[cfg(test)]
 mod tests {
-    use deps::*;
+    use crate::interlude::*;
 
     use crate::user::testing::*;
-    use crate::utils::testing::*;
 
     macro_rules! get_user_integ {
         ($(
@@ -130,13 +127,14 @@ mod tests {
         )*) => {
             mod integ {
                 use super::*;
-                crate::integration_table_tests! {
+                common::integration_table_tests! {
                     $(
                         $name: {
                             uri: $uri,
                             method: "DELETE",
                             status: $status,
                             router: crate::user::router(),
+                            state_fn: crate::utils::testing::state_fn,
                             auth_token: $auth_token,
                             $(extra_assertions: $extra_fn,)?
                         },
@@ -151,9 +149,10 @@ mod tests {
             uri: format!("/users/{USER_01_ID}"),
             auth_token: USER_01_SESSION.into(),
             status: StatusCode::NO_CONTENT,
-            extra_assertions: &|EAArgs { cx, response_json, .. }| {
+            extra_assertions: &|EAArgs { test_cx, response_json, .. }| {
                 Box::pin(async move {
-                    let app = crate::user::router().with_state(cx.cx());
+                    let cx = state_fn(test_cx);
+                    let app = crate::user::router().with_state(cx);
                     let resp = app
                         .oneshot(
                             http::Request::builder()

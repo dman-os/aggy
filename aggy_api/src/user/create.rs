@@ -1,7 +1,4 @@
-use deps::*;
-
-use crate::utils::*;
-use crate::*;
+use crate::interlude::*;
 
 use serde::{Deserialize, Serialize};
 use validator::Validate;
@@ -43,14 +40,15 @@ impl Endpoint for CreateUser {
     type Request = Request;
     type Response = Response;
     type Error = Error;
+    type Cx = Context;
 
     #[tracing::instrument(skip(cx))]
     async fn handle(
         &self,
-        cx: &crate::Context,
+        cx: &Self::Cx,
         request: Self::Request,
     ) -> Result<Self::Response, Self::Error> {
-        validator::Validate::validate(&request).map_err(utils::ValidationErrors::from)?;
+        validator::Validate::validate(&request).map_err(ValidationErrors::from)?;
         let pass_hash = argon2::hash_encoded(
             request.password.as_bytes(),
             &cx.config.pass_salt_hash,
@@ -115,6 +113,7 @@ impl HttpEndpoint for CreateUser {
     const PATH: &'static str = "/users";
     const SUCCESS_CODE: StatusCode = StatusCode::CREATED;
 
+    type SharedCx = SharedContext;
     type HttpRequest = (Json<Request>,);
 
     fn request((Json(req),): Self::HttpRequest) -> Result<Self::Request, Self::Error> {
@@ -194,12 +193,11 @@ impl DocumentedEndpoint for CreateUser {
 
 #[cfg(test)]
 mod tests {
-    use deps::*;
+    use crate::interlude::*;
 
     use super::Request;
 
     use crate::user::testing::*;
-    use crate::utils::testing::*;
     use crate::{auth::*, Endpoint};
 
     fn fixture_request() -> Request {
@@ -214,7 +212,7 @@ mod tests {
         })
     }
 
-    crate::table_tests! {
+    common::table_tests! {
         create_user_validate,
         (request, err_field),
         {
@@ -311,13 +309,14 @@ mod tests {
         )*) => {
             mod integ {
                 use super::*;
-                crate::integration_table_tests! {
+                common::integration_table_tests! {
                     $(
                         $name: {
                             uri: "/users",
                             method: "POST",
                             status: $status,
                             router: crate::user::router(),
+                            state_fn: crate::utils::testing::state_fn,
                             body: $json_body,
                             $(check_json: $check_json,)?
                             $(extra_assertions: $extra_fn,)?
@@ -333,17 +332,18 @@ mod tests {
             status: http::StatusCode::CREATED,
             body: fixture_request_json(),
             check_json: fixture_request_json().remove_keys_from_obj(&["password"]),
-            extra_assertions: &|EAArgs { cx, response_json, .. }| {
+            extra_assertions: &|EAArgs { test_cx, response_json, .. }| {
                 Box::pin(async move {
+                    let cx = state_fn(test_cx);
                     let req_body_json = fixture_request_json();
                     let resp_body_json = response_json.unwrap();
                     // TODO: use super user token
-                    let token = authenticate::Authenticate.handle(&cx.cx(), authenticate::Request{
+                    let token = authenticate::Authenticate.handle(&cx,authenticate::Request{
                         identifier: req_body_json["username"].as_str().unwrap().into(),
                         password: req_body_json["password"].as_str().unwrap().into()
                     }).await.unwrap_or_log().token;
 
-                    let app = crate::user::router().with_state(cx.cx());
+                    let app = crate::user::router().with_state(cx);
                     let resp = app
                         .oneshot(
                             http::Request::builder()

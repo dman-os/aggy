@@ -1,6 +1,14 @@
 [workspace]
 resolver = "2"
-members = ["deps/", "dylink/", "xtask/", "common/", "aggy_api/"]
+members = [
+  "deps/",
+  "dylink/",
+  "xtask/",
+  "common/",
+  "aggy_api/",
+  "epigram_api/",
+  "doface_api/",
+]
 
 [workspace.package]
 version = "0.1.0"
@@ -37,3 +45,4 @@ sqlx = { version = "0.6", features = [
 # internal
 deps = { path = "deps/" }
 dylink = { path = "dylink/" }
+common = { path = "common/" }

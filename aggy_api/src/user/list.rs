@@ -1,9 +1,6 @@
-use deps::*;
-
-use axum::extract::*;
+use crate::interlude::*;
 
 use crate::utils::*;
-use crate::*;
 
 use super::User;
 
@@ -32,7 +29,7 @@ impl SortingField for UserSortingField {
 #[derive(Clone, Copy, Debug)]
 pub struct ListUsers;
 
-crate::alias_and_ref!(ListRequest<UserSortingField>, ListUsersRequest, Request, de);
+common::alias_and_ref!(ListRequest<UserSortingField>, ListUsersRequest, Request, de);
 
 #[derive(Debug, thiserror::Error, serde::Serialize, utoipa::ToSchema)]
 #[serde(crate = "serde", tag = "error", rename_all = "camelCase")]
@@ -50,13 +47,14 @@ pub enum Error {
 
 crate::impl_from_auth_err!(Error);
 
-crate::alias_and_ref!(ListResponse<super::User>, ListUsersResponse, Response, ser);
+common::alias_and_ref!(ListResponse<super::User>, ListUsersResponse, Response, ser);
 
 #[async_trait::async_trait]
 impl crate::AuthenticatedEndpoint for ListUsers {
     type Request = Request;
     type Response = Response;
     type Error = Error;
+    type Cx = Context;
 
     fn authorize_request(&self, request: &Self::Request) -> crate::auth::authorize::Request {
         crate::auth::authorize::Request {
@@ -69,11 +67,11 @@ impl crate::AuthenticatedEndpoint for ListUsers {
     // #[tracing::instrument(skip(cx))]
     async fn handle(
         &self,
-        cx: &crate::Context,
+        cx: &Self::Cx,
         _accessing_user: uuid::Uuid,
         Request(request): Self::Request,
     ) -> Result<Self::Response, Self::Error> {
-        validator::Validate::validate(&request).map_err(utils::ValidationErrors::from)?;
+        validator::Validate::validate(&request).map_err(ValidationErrors::from)?;
         let (cursor_clause, sorting_field, sorting_order, filter) = request
             .after_cursor
             .map(|cursor| (true, cursor))
@@ -250,6 +248,7 @@ impl HttpEndpoint for ListUsers {
     const METHOD: Method = Method::Get;
     const PATH: &'static str = "/users";
 
+    type SharedCx = SharedContext;
     type HttpRequest = (TypedHeader<BearerToken>, Json<Request>);
 
     fn request(
@@ -335,11 +334,10 @@ impl DocumentedEndpoint for ListUsers {
 mod tests {
     // TODO: rigourous test suite, this module's not the most type safe
 
-    use deps::*;
+    use crate::interlude::*;
 
     use crate::user::list::*;
     use crate::user::testing::*;
-    use crate::utils::testing::*;
 
     fn fixture_request() -> ListUsersRequest {
         serde_json::from_value(fixture_request_json()).unwrap()
@@ -354,7 +352,7 @@ mod tests {
         })
     }
 
-    crate::table_tests! {
+    common::table_tests! {
         list_users_validate,
         (request, err_field),
         {
@@ -415,13 +413,14 @@ mod tests {
         )*) => {
             mod integ {
                 use super::*;
-                crate::integration_table_tests! {
+                common::integration_table_tests! {
                     $(
                         $name: {
                             uri: "/users",
                             method: "GET",
                             status: $status,
                             router: crate::user::router(),
+                            state_fn: crate::utils::testing::state_fn,
                             body: $json_body,
                             $(check_json: $check_json,)?
                             auth_token: $auth_token,
@@ -441,12 +440,13 @@ mod tests {
                 "limit": 2,
                 "filter": null,
             })),
-            extra_assertions: &|EAArgs { cx, response_json, .. }| {
+            extra_assertions: &|EAArgs { test_cx, response_json, .. }| {
                 Box::pin(async move {
+                    let cx = state_fn(test_cx);
                     let resp_body_json = response_json.unwrap();
                     assert_eq!(resp_body_json["items"].as_array().unwrap().len(), 2);
                     assert!(resp_body_json["cursor"].as_str().is_some());
-                    let app = crate::user::router().with_state(cx.cx());
+                    let app = crate::user::router().with_state(cx);
                     let resp = app
                         .oneshot(
                             http::Request::builder()

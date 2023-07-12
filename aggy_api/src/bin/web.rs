@@ -4,7 +4,7 @@ use aggy_api::*;
 
 fn main() {
     dotenvy::dotenv().ok();
-    setup_tracing().unwrap();
+    common::setup_tracing().unwrap();
     #[cfg(feature = "dylink")]
     tracing::warn!("dylink enabled");
 

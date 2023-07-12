@@ -1,6 +1,4 @@
-use deps::*;
-
-use crate::*;
+use crate::interlude::*;
 
 use serde::{Deserialize, Serialize};
 
@@ -40,10 +38,11 @@ impl Endpoint for Authenticate {
     type Request = Request;
     type Response = Response;
     type Error = Error;
+    type Cx = Context;
 
     async fn handle(
         &self,
-        cx: &crate::Context,
+        cx: &Self::Cx,
         request: Self::Request,
     ) -> Result<Self::Response, Self::Error> {
         let result = sqlx::query!(
@@ -107,6 +106,7 @@ impl HttpEndpoint for Authenticate {
     const METHOD: Method = Method::Post;
     const PATH: &'static str = "/authenticate";
 
+    type SharedCx = SharedContext;
     type HttpRequest = (Json<Request>,);
 
     fn request((Json(req),): Self::HttpRequest) -> Result<Self::Request, Self::Error> {
@@ -158,19 +158,18 @@ impl From<&Error> for axum::http::StatusCode {
 
 #[cfg(test)]
 mod tests {
-    use deps::*;
+    use crate::interlude::*;
 
     use crate::user::testing::*;
-    use crate::utils::testing::*;
 
-    use axum::http;
     use tower::ServiceExt;
 
     #[tokio::test]
     async fn authenticate_works_with_username() {
-        let cx = TestContext::new(crate::function!()).await;
+        let test_cx = TestContext::new(common::function!()).await;
         {
-            let app = crate::auth::router().with_state(cx.cx());
+            let cx = state_fn(&test_cx);
+            let app = crate::auth::router().with_state(cx.clone());
 
             let body_json = serde_json::json!({
                 "identifier": USER_01_USERNAME,
@@ -195,7 +194,7 @@ mod tests {
             assert!(body["token"].is_string());
             assert_eq!(USER_01_ID.to_string(), body["userId"].as_str().unwrap());
 
-            let app = crate::user::router().with_state(cx.cx());
+            let app = crate::user::router().with_state(cx);
             let resp = app
                 .oneshot(
                     http::Request::builder()
@@ -212,14 +211,15 @@ mod tests {
                 .unwrap_or_log();
             assert_eq!(resp.status(), http::StatusCode::OK);
         }
-        cx.close().await;
+        test_cx.close().await;
     }
 
     #[tokio::test]
     async fn authenticate_works_with_email() {
-        let cx = TestContext::new(crate::function!()).await;
+        let test_cx = TestContext::new(common::function!()).await;
         {
-            let app = crate::auth::router().with_state(cx.cx());
+            let cx = state_fn(&test_cx);
+            let app = crate::auth::router().with_state(cx.clone());
 
             let body_json = serde_json::json!({
                 "identifier": USER_01_EMAIL,
@@ -244,7 +244,7 @@ mod tests {
             assert!(body["token"].is_string());
             assert_eq!(USER_01_ID.to_string(), body["userId"].as_str().unwrap());
 
-            let app = crate::user::router().with_state(cx.cx());
+            let app = crate::user::router().with_state(cx);
             let resp = app
                 .oneshot(
                     http::Request::builder()
@@ -261,14 +261,15 @@ mod tests {
                 .unwrap_or_log();
             assert_eq!(resp.status(), http::StatusCode::OK);
         }
-        cx.close().await;
+        test_cx.close().await;
     }
 
     #[tokio::test]
     async fn authenticate_fails_if_username_not_found() {
-        let cx = TestContext::new(crate::function!()).await;
+        let test_cx = TestContext::new(common::function!()).await;
         {
-            let app = crate::auth::router().with_state(cx.cx());
+            let cx = state_fn(&test_cx);
+            let app = crate::auth::router().with_state(cx);
 
             let body_json = serde_json::json!({
                 "identifier": "golden_eel",
@@ -299,14 +300,15 @@ mod tests {
                 ("response", &body),
             );
         }
-        cx.close().await;
+        test_cx.close().await;
     }
 
     #[tokio::test]
     async fn authenticate_fails_if_email_not_found() {
-        let cx = TestContext::new(crate::function!()).await;
+        let test_cx = TestContext::new(common::function!()).await;
         {
-            let app = crate::auth::router().with_state(cx.cx());
+            let cx = state_fn(&test_cx);
+            let app = crate::auth::router().with_state(cx);
 
             let body_json = serde_json::json!({
                 "identifier": "xan@da.man",
@@ -337,14 +339,15 @@ mod tests {
                 ("response", &body),
             );
         }
-        cx.close().await;
+        test_cx.close().await;
     }
 
     #[tokio::test]
     async fn authenticate_fails_if_password_is_wrong() {
-        let cx = TestContext::new(crate::function!()).await;
+        let test_cx = TestContext::new(common::function!()).await;
         {
-            let app = crate::auth::router().with_state(cx.cx());
+            let cx = state_fn(&test_cx);
+            let app = crate::auth::router().with_state(cx);
 
             let body_json = serde_json::json!({
                 "identifier": USER_01_EMAIL,
@@ -375,6 +378,6 @@ mod tests {
                 ("response", &body),
             );
         }
-        cx.close().await;
+        test_cx.close().await;
     }
 }

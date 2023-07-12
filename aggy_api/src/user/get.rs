@@ -1,7 +1,5 @@
 use crate::interlude::*;
 
-use axum::extract::*;
-
 use super::User;
 
 #[derive(Clone, Copy, Debug)]
@@ -33,6 +31,7 @@ impl crate::AuthenticatedEndpoint for GetUser {
     type Request = Request;
     type Response = Response;
     type Error = Error;
+    type Cx = Context;
 
     fn authorize_request(&self, request: &Self::Request) -> crate::auth::authorize::Request {
         crate::auth::authorize::Request {
@@ -45,7 +44,7 @@ impl crate::AuthenticatedEndpoint for GetUser {
     #[tracing::instrument(skip(cx))]
     async fn handle(
         &self,
-        cx: &crate::Context,
+        cx: &Self::Cx,
         _accessing_user: uuid::Uuid,
         request: Self::Request,
     ) -> Result<Self::Response, Self::Error> {
@@ -93,6 +92,7 @@ impl HttpEndpoint for GetUser {
     const METHOD: Method = Method::Get;
     const PATH: &'static str = "/users/:id";
 
+    type SharedCx = SharedContext;
     type HttpRequest = (TypedHeader<BearerToken>, Path<uuid::Uuid>, DiscardBody);
 
     fn request(
@@ -149,10 +149,9 @@ impl DocumentedEndpoint for GetUser {
 
 #[cfg(test)]
 mod tests {
-    use deps::*;
+    use crate::interlude::*;
 
     use crate::user::testing::*;
-    use crate::utils::testing::*;
 
     macro_rules! get_user_integ {
         ($(
@@ -166,13 +165,14 @@ mod tests {
         )*) => {
             mod integ {
                 use super::*;
-                crate::integration_table_tests! {
+                common::integration_table_tests! {
                     $(
                         $name: {
                             uri: $uri,
                             method: "GET",
                             status: $status,
                             router: crate::user::router(),
+                            state_fn: crate::utils::testing::state_fn,
                             $(check_json: $check_json,)?
                             auth_token: $auth_token,
                             $(extra_assertions: $extra_fn,)?
