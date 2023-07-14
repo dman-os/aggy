@@ -3,6 +3,7 @@ name = "aggy_api"
 version.workspace = true
 edition.workspace = true
 default-run = "web"
+build = "build.rs"
 
 [[bin]]
 name = "web"

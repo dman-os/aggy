@@ -47,6 +47,6 @@ sqlx = { version = "0.6", features = [
 deps = { path = "deps/" }
 dylink = { path = "dylink/" }
 common = { path = "common/" }
-aggy_api = { path = "aggy_api/" }
-doface_api = { path = "doface_api/" }
-epigram_api = { path = "epigram_api/" }
+aggy_api = { path = "aggy_api/", default-features = false }
+doface_api = { path = "doface_api/", default-features = false }
+epigram_api = { path = "epigram_api/", default-features = false }
