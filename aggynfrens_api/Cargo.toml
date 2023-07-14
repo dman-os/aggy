@@ -1,0 +1,18 @@
+[package]
+name = "aggynfrens_api"
+version.workspace = true
+edition.workspace = true
+
+[features]
+default = ["dylink"]
+
+[dependencies]
+aggy_api = { workspace = true }
+deps = { workspace = true }
+dylink = { workspace = true, optional = true }
+common = { workspace = true }
+
+shadow-rs = { workspace = true }
+
+[build-dependencies]
+shadow-rs = { workspace = true }

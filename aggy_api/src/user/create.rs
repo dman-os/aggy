@@ -96,7 +96,7 @@ FROM create_user($1::TEXT::CITEXT, $2::TEXT::CITEXT, $3)
     }
 }
 
-impl From<&Error> for axum::http::StatusCode {
+impl From<&Error> for StatusCode {
     fn from(err: &Error) -> Self {
         use Error::*;
         match err {
@@ -120,7 +120,7 @@ impl HttpEndpoint for CreateUser {
         Ok(req)
     }
 
-    fn response(Ref(resp): Self::Response) -> axum::response::Response {
+    fn response(Ref(resp): Self::Response) -> HttpResponse {
         Json(resp).into_response()
     }
 }
@@ -350,7 +350,7 @@ mod tests {
                                 .method("GET")
                                 .uri(format!("/users/{}", resp_body_json["id"].as_str().unwrap()))
                                 .header(
-                                    axum::http::header::AUTHORIZATION,
+                                    http::header::AUTHORIZATION,
                                     format!("Bearer {token}"),
                                 )
                                 .body(Default::default())

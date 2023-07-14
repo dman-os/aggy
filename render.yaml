@@ -1,0 +1,16 @@
+services:
+  # A Docker web service
+  - type: web
+    name: aggynfrens
+    repo: https://github.com/dman-os/aggy.git # optional
+    runtime: docker
+    plan: free
+    dockerContext: ./aggynfrens
+    dockerfilePath: ./aggynfrens/Containerfile.web # optional
+    healthCheckPath: /up
+    # region: frankfurt
+    envVars:
+      - key: AGGY_DATABASE_URL
+        sync: false
+      - key: AUTH_TOKEN_LIFESPAN_SECS
+        value: 900

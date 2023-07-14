@@ -62,7 +62,7 @@ SELECT delete_user($1)
     }
 }
 
-impl From<&Error> for axum::http::StatusCode {
+impl From<&Error> for StatusCode {
     fn from(err: &Error) -> Self {
         use Error::*;
         match err {
@@ -89,7 +89,7 @@ impl HttpEndpoint for DeleteUser {
         })
     }
 
-    fn response(_: Self::Response) -> axum::response::Response {
+    fn response(_: Self::Response) -> HttpResponse {
         Default::default()
     }
 }
@@ -159,7 +159,7 @@ mod tests {
                                 .method("GET")
                                 .uri(format!("/users/{USER_01_ID}"))
                                 .header(
-                                    axum::http::header::AUTHORIZATION,
+                                    http::header::AUTHORIZATION,
                                     format!("Bearer {USER_04_SESSION}"),
                                 )
                                 .body(Default::default())

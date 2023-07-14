@@ -158,7 +158,7 @@ FROM update_user(
     }
 }
 
-impl From<&Error> for axum::http::StatusCode {
+impl From<&Error> for StatusCode {
     fn from(err: &Error) -> Self {
         use Error::*;
         match err {
@@ -189,7 +189,7 @@ impl HttpEndpoint for UpdateUser {
         })
     }
 
-    fn response(Ref(resp): Self::Response) -> axum::response::Response {
+    fn response(Ref(resp): Self::Response) -> HttpResponse {
         Json(resp).into_response()
     }
 }
@@ -415,7 +415,7 @@ mod tests {
                                 .method("GET")
                                 .uri(format!("/users/{USER_01_ID}"))
                                 .header(
-                                    axum::http::header::AUTHORIZATION,
+                                    http::header::AUTHORIZATION,
                                     format!("Bearer {USER_01_SESSION}"),
                                 )
                                 .body(Default::default())

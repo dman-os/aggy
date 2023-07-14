@@ -233,7 +233,7 @@ LIMIT $2 + 1
     }
 }
 
-impl From<&Error> for axum::http::StatusCode {
+impl From<&Error> for StatusCode {
     fn from(err: &Error) -> Self {
         use Error::*;
         match err {
@@ -261,7 +261,7 @@ impl HttpEndpoint for ListUsers {
         .into())
     }
 
-    fn response(Response(resp): Self::Response) -> axum::response::Response {
+    fn response(Response(resp): Self::Response) -> HttpResponse {
         Json(resp).into_response()
     }
 }
@@ -456,7 +456,7 @@ mod tests {
                                     http::header::AUTHORIZATION,
                                     format!("Bearer {USER_01_SESSION}"),
                                 )
-                                .header(axum::http::header::CONTENT_TYPE, "application/json")
+                                .header(http::header::CONTENT_TYPE, "application/json")
                                 .body(
                                     serde_json::to_vec(
                                         &serde_json::json!({

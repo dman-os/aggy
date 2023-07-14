@@ -71,7 +71,7 @@ fn main() -> Result<(), AnyErr> {
                 "failed to cargo fmt"
             );
             assert!(
-                show_cmd(cargo_cmd().args(&["sqlx", "prepare", "--", "--lib",]))
+                show_cmd(cargo_cmd().args(&["sqlx", "prepare", "--merged", "--", "--lib",]))
                     .status()
                     .unwrap()
                     .success(),

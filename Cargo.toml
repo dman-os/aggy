@@ -5,6 +5,7 @@ members = [
   "dylink/",
   "xtask/",
   "common/",
+  "aggynfrens_api/",
   "aggy_api/",
   "epigram_api/",
   "doface_api/",
@@ -46,3 +47,6 @@ sqlx = { version = "0.6", features = [
 deps = { path = "deps/" }
 dylink = { path = "dylink/" }
 common = { path = "common/" }
+aggy_api = { path = "aggy_api/" }
+doface_api = { path = "doface_api/" }
+epigram_api = { path = "epigram_api/" }

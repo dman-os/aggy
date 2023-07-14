@@ -9,7 +9,8 @@ mod interlude {
     pub use axum::{extract::Path, http, response::IntoResponse, Json, TypedHeader};
     pub use common::{
         utils::ValidationErrors, AuthedUid, AuthenticatedEndpoint, Authorize, DocumentedEndpoint,
-        Endpoint, EndpointWrapper, ErrorResponse, HttpEndpoint, Method, Ref, StatusCode, Tag,
+        Endpoint, EndpointWrapper, ErrorResponse, HttpEndpoint, HttpResponse, Method, Ref,
+        StatusCode, Tag,
     };
     pub use deps::*;
     pub type BearerToken = axum::headers::Authorization<axum::headers::authorization::Bearer>;
@@ -49,6 +50,12 @@ pub struct Context {
 pub type SharedContext = std::sync::Arc<Context>;
 
 shadow_rs::shadow!(build);
+
+pub fn router() -> axum::Router<SharedContext> {
+    axum::Router::new()
+        .merge(user::router())
+        .merge(auth::router())
+}
 
 pub struct ApiDoc;
 impl utoipa::OpenApi for ApiDoc {

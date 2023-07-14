@@ -1,3 +1,5 @@
+use crate::interlude::*;
+
 pub use validation_errs::*;
 mod validation_errs;
 
@@ -34,3 +36,15 @@ where
     }
 }
 */
+pub fn get_env_var<K>(key: K) -> eyre::Result<String>
+where
+    K: AsRef<std::ffi::OsStr>,
+{
+    match std::env::var(key.as_ref()) {
+        Ok(val) => Ok(val),
+        Err(err) => Err(eyre::eyre!(
+            "error geting env var {:?}: {err}",
+            key.as_ref()
+        )),
+    }
+}

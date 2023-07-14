@@ -7,6 +7,8 @@ use axum::{
 use utoipa::openapi;
 
 pub use axum::http::StatusCode;
+pub use sqlx;
+pub use validator;
 
 pub mod macros;
 pub mod utils;
@@ -110,6 +112,7 @@ where
 }
 
 pub type Method = openapi::PathItemType;
+pub type HttpResponse = axum::response::Response;
 
 pub trait HttpEndpoint: Endpoint + Clone
 where
@@ -129,7 +132,7 @@ where
 
     /// TODO: consider making this a `From` trait bound on `Self::Parameters`
     fn request(params: Self::HttpRequest) -> Result<Self::Request, Self::Error>;
-    fn response(resp: Self::Response) -> axum::response::Response;
+    fn response(resp: Self::Response) -> HttpResponse;
 
     /// This actally need not be a method but I guess it allows for easy behavior
     /// modification. We ought to probably move these to the `Handler` impl

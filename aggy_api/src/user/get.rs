@@ -77,7 +77,7 @@ WHERE id = $1::uuid
     }
 }
 
-impl From<&Error> for axum::http::StatusCode {
+impl From<&Error> for StatusCode {
     fn from(err: &Error) -> Self {
         use Error::*;
         match err {
@@ -104,7 +104,7 @@ impl HttpEndpoint for GetUser {
         })
     }
 
-    fn response(Ref(resp): Self::Response) -> axum::response::Response {
+    fn response(Ref(resp): Self::Response) -> HttpResponse {
         Json(resp).into_response()
     }
 }
