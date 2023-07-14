@@ -2,13 +2,13 @@ version: "3.9"
 
 # TODO: use devcontainer to develop inside the container
 services:
-  aggynfrens-api:
-    profiles:
-      - disabled
-    restart: "no"
-    deploy:
-      replicas: 0 # disable the api.
-    #image: registry.heroku.com/my-rust-api/web
+  # aggynfrens-api:
+  #   profiles:
+  #     - disabled
+  #   restart: "no"
+  #   deploy:
+  #     replicas: 0 # disable the api.
+  #   #image: registry.heroku.com/my-rust-api/web
   postgres:
     container_name: aggy-postgres-server-dev
     env_file:

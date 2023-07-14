@@ -45,7 +45,7 @@ fn main() {
                         }))
                     }),
                 )
-                .merge(utoipa_swagger_ui::SwaggerUi::new("/swagger-ui/*tail").url(
+                .merge(utoipa_swagger_ui::SwaggerUi::new("/swagger-ui").url(
                     "/api-doc/openapi.json",
                     <ApiDoc as utoipa::OpenApi>::openapi(),
                 ))

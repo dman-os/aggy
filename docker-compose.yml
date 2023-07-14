@@ -1,17 +1,17 @@
 version: "3.9"
 
 services:
-  aggynfrens-api:
-    container_name: aggynfrens-api
-    build:
-      context: .
-      dockerfile: Containerfile.web
-    # restart: unless-stopped
-    networks:
-      - net-one
-    depends_on:
-      # - redis
-      - postgres
+  # aggynfrens-api:
+  #   container_name: aggynfrens-api
+  #   build:
+  #     context: .
+  #     dockerfile: Containerfile.web
+  #   # restart: unless-stopped
+  #   networks:
+  #     - net-one
+  #   depends_on:
+  #     # - redis
+  #     - postgres
   postgres:
     container_name: aggynfrens-postgres-server
     image: docker.io/library/postgres:15-alpine
