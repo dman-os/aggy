@@ -3,7 +3,7 @@ name = "aggy_api"
 version.workspace = true
 edition.workspace = true
 default-run = "web"
-build = "build.rs"
+# build = "build.rs"
 
 [[bin]]
 name = "web"
@@ -23,9 +23,9 @@ deps = { workspace = true }
 dylink = { workspace = true, optional = true }
 common = { workspace = true }
 
-shadow-rs = { workspace = true }
+# shadow-rs = { workspace = true }
 validator = { workspace = true }
 sqlx = { workspace = true }
 
 [build-dependencies]
-shadow-rs = { workspace = true }
+# shadow-rs = { workspace = true }

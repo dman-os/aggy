@@ -49,7 +49,7 @@ pub struct Context {
 
 pub type SharedContext = std::sync::Arc<Context>;
 
-shadow_rs::shadow!(build);
+// shadow_rs::shadow!(build);
 
 pub fn router() -> axum::Router<SharedContext> {
     axum::Router::new()
@@ -60,18 +60,19 @@ pub fn router() -> axum::Router<SharedContext> {
 pub struct ApiDoc;
 impl utoipa::OpenApi for ApiDoc {
     fn openapi() -> openapi::OpenApi {
+        //
         let mut openapi = openapi::OpenApiBuilder::new()
             .info(
                 openapi::InfoBuilder::new()
-                    .title(build::PROJECT_NAME)
-                    .version(build::PKG_VERSION)
+                    .title("aggy_api")
+                    // .version(build::PKG_VERSION)
                     .description(Some(format!(
                         r#"{}
 
 Notes:
 - Time values are integers despite the `string($date-time)` type shown here.
                         "#,
-                        build::PKG_DESCRIPTION
+                        "aggy is an experiment"
                     )))
                     .build(),
             )
