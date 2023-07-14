@@ -5,7 +5,7 @@ services:
     repo: https://github.com/dman-os/aggy.git # optional
     runtime: docker
     plan: free
-    dockerfilePath: ./Containerfile.web # optional
+    dockerfilePath: ./aggynfrens.Dockerfile # optional
     healthCheckPath: /up
     # region: frankfurt
     envVars:
