@@ -46,7 +46,7 @@ const topPostsSeed = [
               "(\\\"_\")=b": { count: 1 },
             } as Record<string, T.FaceSummary>
           }
-        ]
+        ] as T.Epigram[]
       }
     ]
   },
@@ -63,7 +63,6 @@ const topPostsSeed = [
         ":'<": { count: 1 },
       }
     },
-    children: [],
   },
   {
     title: "Yo, I'm tha admin yo",
@@ -77,7 +76,6 @@ const topPostsSeed = [
         "b": { count: 123 }
       } as Record<string, T.FaceSummary>
     },
-    children: [],
   },
 ];
 export const topPosts: T.AggyPost[] = [
@@ -110,7 +108,7 @@ export const topPosts: T.AggyPost[] = [
         content: `<a href="${link}">${seed.title}</a>`,
         content_mime: 'text/html',
         ...seed.epigram,
-        children: seed.children?.map(seedToEpigram)
+        children: (seed.children ?? []).map(seedToEpigram)
       },
     });
     return arr;
