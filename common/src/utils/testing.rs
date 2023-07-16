@@ -54,6 +54,109 @@ pub struct TestContext {
         Option<Box<dyn FnOnce(sqlx::postgres::PgPool) -> futures::future::BoxFuture<'static, ()>>>,
 }
 
+/// NOTE: this is only good for tests and doesn't handle re-runnable migs well
+#[derive(Debug)]
+struct FlywayMigrationSource<'a>(&'a std::path::Path);
+
+impl<'a> sqlx::migrate::MigrationSource<'a> for FlywayMigrationSource<'a> {
+    fn resolve(
+        self,
+    ) -> futures::future::BoxFuture<
+        'a,
+        Result<Vec<sqlx::migrate::Migration>, sqlx::error::BoxDynError>,
+    > {
+        Box::pin(async move {
+            struct WalkCx<'a> {
+                migrations: &'a mut Vec<sqlx::migrate::Migration>,
+                rerunnable_ctr: i64,
+            }
+            fn walk_dir<'a>(
+                path: &'a std::path::Path,
+                mut cx: &'a mut WalkCx,
+            ) -> futures::future::BoxFuture<'a, Result<(), sqlx::error::BoxDynError>> {
+                Box::pin(async move {
+                    let mut s = tokio::fs::read_dir(path).await?;
+                    while let Some(entry) = s.next_entry().await? {
+                        // std::fs::metadata traverses symlinks
+                        let metadata = std::fs::metadata(&entry.path())?;
+                        if metadata.is_dir() {
+                            walk_dir(&entry.path(), &mut cx).await?;
+                            return Ok(());
+                        }
+                        if !metadata.is_file() {
+                            // not a file; ignore
+                            continue;
+                        }
+
+                        let file_name = entry.file_name().to_string_lossy().into_owned();
+
+                        let parts = file_name.splitn(2, "__").collect::<Vec<_>>();
+
+                        if parts.len() != 2
+                            || !parts[1].ends_with(".sql")
+                            || !(parts[0].starts_with('m') || parts[0].starts_with('r'))
+                        {
+                            // not of the format: <VERSION>_<DESCRIPTION>.sql; ignore
+                            continue;
+                        }
+
+                        let version: i64 = if parts[0].starts_with('m') {
+                            let Ok(v_parts) = parts[0][1..]
+                                .split('.')
+                                .into_iter()
+                                .map(|str| str.parse())
+                                .collect::<Result<Vec<i64>, _>>() else
+                            {
+                                 continue;
+                            };
+                            if v_parts.len() != 3 {
+                                continue;
+                            }
+                            (v_parts[0] * 1_000_000) + (v_parts[1] * 1000) + v_parts[2]
+                        } else {
+                            // run rerunnable migrations last
+                            cx.rerunnable_ctr += 1;
+                            i64::MAX - cx.rerunnable_ctr
+                        };
+
+                        let migration_type = sqlx::migrate::MigrationType::from_filename(parts[1]);
+                        // remove the `.sql` and replace `_` with ` `
+                        let description = parts[1]
+                            .trim_end_matches(migration_type.suffix())
+                            .replace('_', " ")
+                            .to_owned();
+
+                        let sql = tokio::fs::read_to_string(&entry.path()).await?;
+
+                        cx.migrations.push(sqlx::migrate::Migration::new(
+                            version,
+                            std::borrow::Cow::Owned(description),
+                            migration_type,
+                            std::borrow::Cow::Owned(sql),
+                        ));
+                    }
+
+                    Ok(())
+                })
+            }
+            let mut migrations = Vec::new();
+            walk_dir(
+                &self.0.canonicalize()?,
+                &mut (WalkCx {
+                    rerunnable_ctr: 0,
+                    migrations: &mut migrations,
+                }),
+            )
+            .await?;
+            tracing::info!(?migrations, ?self, "migrations");
+            // ensure that we are sorted by `VERSION ASC`
+            migrations.sort_by_key(|m| m.version);
+
+            Ok(migrations)
+        })
+    }
+}
+
 impl TestContext {
     pub async fn new(test_name: &'static str) -> Self {
         setup_tracing_once();
@@ -76,16 +179,17 @@ impl TestContext {
                 std::env::var("TEST_DB_USER")
                     .expect("TEST_DB_USER wasn't found in enviroment")
                     .as_str(),
-            );
+            )
+            .log_statements("DEBUG".parse().unwrap());
 
-        let mut opts = if let Ok(pword) = std::env::var("TEST_DB_PASS") {
+        let opts = if let Ok(pword) = std::env::var("TEST_DB_PASS") {
             opts.password(pword.as_str())
         } else {
             opts
         };
-        opts.log_statements("DEBUG".parse().unwrap());
 
         let mut connection = opts
+            .clone()
             .connect()
             .await
             .expect("Failed to connect to Postgres without db");
@@ -108,7 +212,7 @@ impl TestContext {
             .expect("Failed to connect to Postgres as test db.");
 
         // sqlx::migrate!("./migrations")
-        sqlx::migrate::Migrator::new(std::path::Path::new("./migrations"))
+        sqlx::migrate::Migrator::new(FlywayMigrationSource(std::path::Path::new("./migrations")))
             .await
             .expect("error setting up migrator for ./migrations")
             .run(&db_pool)

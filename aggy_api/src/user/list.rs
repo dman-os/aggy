@@ -153,7 +153,7 @@ SELECT
     pic_url
 FROM (
     SELECT *
-    FROM users
+    FROM auth.users
     WHERE cast($1 as text) IS NULL OR (
         username ILIKE '%%' || $1 || '%%'
         OR email ILIKE '%%' || $1 || '%%'

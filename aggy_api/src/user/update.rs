@@ -116,10 +116,10 @@ SELECT
     email::TEXT as "email!",
     username::TEXT as "username!",
     pic_url
-FROM update_user(
+FROM auth.update_user(
     $1,
-    $2::TEXT::CITEXT, 
-    $3::TEXT::CITEXT, 
+    $2::TEXT::extensions.CITEXT, 
+    $3::TEXT::extensions.CITEXT, 
     $4,
     $5
 )
@@ -138,10 +138,10 @@ FROM update_user(
             },
             sqlx::Error::Database(boxed) if boxed.constraint().is_some() => {
                 match boxed.constraint().unwrap() {
-                    "unique_users_username" => Error::UsernameOccupied {
+                    "users_username_key" => Error::UsernameOccupied {
                         username: request.username.unwrap(),
                     },
-                    "unique_users_email" => Error::EmailOccupied {
+                    "users_email_key" => Error::EmailOccupied {
                         email: request.email.unwrap(),
                     },
                     _ => Error::Internal {

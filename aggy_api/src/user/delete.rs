@@ -48,7 +48,7 @@ impl crate::AuthenticatedEndpoint for DeleteUser {
 
         let was_deleted = sqlx::query!(
             r#"
-SELECT delete_user($1)
+SELECT auth.delete_user($1)
             "#,
             &id
         )

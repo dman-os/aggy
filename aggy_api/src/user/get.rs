@@ -60,7 +60,7 @@ SELECT
     email::TEXT as "email!",
     username::TEXT as "username!",
     pic_url
-FROM users
+FROM auth.users
 WHERE id = $1::uuid
             "#,
             &id

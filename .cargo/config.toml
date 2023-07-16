@@ -1,6 +1,9 @@
 
 [build]
-target-dir = "/var/run/media/asdf/Windows/target/ws/"
+target-dir = "/var/run/media/asdf/Windows/target/aggy/"
+rustflags = [
+  "--cfg uuid_unstable",
+] # custom flags to pass to all compiler invocations
 
 [alias]
 xtask = "run --package xtask --profile xtask --"

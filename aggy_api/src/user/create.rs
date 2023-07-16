@@ -55,6 +55,7 @@ impl Endpoint for CreateUser {
             &cx.config.argon2_conf,
         )
         .unwrap_or_log();
+
         let user = sqlx::query_as!(
             super::User,
             r#"
@@ -65,8 +66,10 @@ SELECT
     email::TEXT as "email!",
     username::TEXT as "username!",
     pic_url
-FROM create_user($1::TEXT::CITEXT, $2::TEXT::CITEXT, $3)
+FROM auth.create_user($1, $2::TEXT::extensions.CITEXT, $3::TEXT::extensions.CITEXT, $4)
                 "#,
+            // FIXME: replace with v7
+            &uuid::Uuid::new_v4(),
             &request.username,
             &request.email,
             &pass_hash
@@ -76,10 +79,10 @@ FROM create_user($1::TEXT::CITEXT, $2::TEXT::CITEXT, $3)
         .map_err(|err| match &err {
             sqlx::Error::Database(boxed) if boxed.constraint().is_some() => {
                 match boxed.constraint().unwrap() {
-                    "unique_users_username" => Error::UsernameOccupied {
+                    "users_username_key" => Error::UsernameOccupied {
                         username: request.username,
                     },
-                    "unique_users_email" => Error::EmailOccupied {
+                    "users_email_key" => Error::EmailOccupied {
                         email: request.email,
                     },
                     _ => Error::Internal {

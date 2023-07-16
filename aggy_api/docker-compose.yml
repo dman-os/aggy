@@ -1,17 +1,6 @@
 version: "3.9"
 
 services:
-  # aggy-api:
-  #   container_name: aggy-api
-  #   build:
-  #     context: .
-  #     dockerfile: Containerfile.web
-  #   # restart: unless-stopped
-  #   networks:
-  #     - net-one
-  #   depends_on:
-  #     # - redis
-  #     - postgres
   postgres:
     container_name: aggy-postgres-server
     image: docker.io/library/postgres:15-alpine
@@ -28,18 +17,30 @@ services:
     # expose:
     #     - "5432"
 
-  redis:
-    profiles:
-      - disabled
-    container_name: aggy-redis-server
-    image: redis:7-alpine
-    # restart: unless-stopped
-    volumes:
-      - redisdata:/var/lib/redis/data
-    networks:
-      - net-one
+  # redis:
+  #   profiles:
+  #     - disabled
+  #   container_name: aggy-redis-server
+  #   image: redis:7-alpine
+  #   # restart: unless-stopped
+  #   volumes:
+  #     - redisdata:/var/lib/redis/data
+  #   networks:
+  #     - net-one
     # expose:
     #     - "6379"
+  flyway:
+    image: docker.io/flyway/flyway:9.18-alpine
+    container_name: flyway
+    profiles:
+      - disabled
+    network_mode: host
+    # restart: unless-stopped
+    volumes:
+      - ..:/flyway/conf:ro
+      - ./migrations/:/flyway/sql:ro
+    environment:
+      FLYWAY_URL: ${FLYWAY_URL:-jdbc:postgresql://localhost:5432/${DB_USERNAME?"DB_USERNAME not set."}?user=${DB_USERNAME?"DB_USERNAME not set."}&password=${DB_PASSWORD?"DB_PASSWORD not set."}}
 
 networks:
   net-one:

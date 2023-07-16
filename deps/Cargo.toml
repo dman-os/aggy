@@ -62,7 +62,7 @@ utoipa = { version = "3.3", features = [
   "preserve_order",
 ] }
 utoipa-swagger-ui = { version = "3.1", features = ["axum"] }
-uuid = { version = "1", features = ["v4", "fast-rng", "serde"] }
+uuid = { version = "1", features = ["v4", "v7", "fast-rng", "serde"] }
 
 # config = { version = "0.13", features = ["toml"] }
 dotenvy = "0.15"

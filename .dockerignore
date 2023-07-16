@@ -27,4 +27,4 @@
 !aggynfrens_api/build.rs
 !aggynfrens_api/src
 
-!sqlx-data.json
+!.sqlx

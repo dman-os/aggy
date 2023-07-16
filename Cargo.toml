@@ -32,7 +32,7 @@ debug = 0
 shadow-rs = "0.23.0"
 # the following contain macros that don't like being re-exported
 validator = { version = "0.16", features = ["derive"] }
-sqlx = { version = "0.6", features = [
+sqlx = { version = "0.7", features = [
   "postgres",
   "runtime-tokio-rustls",
   "time",
@@ -40,7 +40,6 @@ sqlx = { version = "0.6", features = [
   "macros",
   "json",
   "migrate",
-  "offline",
 ] }
 
 # internal
