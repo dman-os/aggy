@@ -37,7 +37,7 @@ impl common::Authorize for crate::Context {
             super::Session,
             r#"
 SELECT * 
-FROM sessions
+FROM auth.sessions
 WHERE token = $1
             "#,
             &request.auth_token.token()

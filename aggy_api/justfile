@@ -1,0 +1,31 @@
+set shell := ["sh", "-c"]
+set dotenv-load
+
+# List the avail commands
+default:
+  @just --list --unsorted
+
+# The flyway cli tool
+flyway *ARGS:
+  # FIXME: podman compose doesn't support such invocations?
+
+  docker compose run --rm flyway {{ARGS}}
+
+# Apply migrations to database.
+db-mig:
+  @just flyway migrate
+
+# Apply migrations to database.
+db-reset:
+  cargo sqlx database drop
+  cargo sqlx database create
+  @just flyway migrate
+
+alias dev := dev-up
+
+# Start all services required for development
+dev-up:
+  podman-compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+
+test *ARGS:
+  cargo nextest run {{ARGS}}

@@ -48,11 +48,11 @@ impl Endpoint for Authenticate {
         let result = sqlx::query!(
             r#"
 SELECT user_id, pass_hash
-FROM credentials
+FROM auth.credentials
 WHERE user_id = (
     SELECT id
-    FROM users
-    WHERE email = $1::TEXT::CITEXT OR username = $1::TEXT::CITEXT
+    FROM auth.users
+    WHERE email = $1::TEXT::extensions.CITEXT OR username = $1::TEXT::extensions.CITEXT
 )
         "#,
             &request.identifier,
@@ -77,7 +77,7 @@ WHERE user_id = (
         let token = uuid::Uuid::new_v4().to_string();
         sqlx::query!(
             r#"
-INSERT INTO sessions (token, user_id, expires_at)
+INSERT INTO auth.sessions (token, user_id, expires_at)
 VALUES (
     $1,
     $2,

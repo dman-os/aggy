@@ -3,6 +3,7 @@ FROM docker.io/library/rust:1.70-slim AS chef
 
 WORKDIR /srv/app
 
+ENV RUSTFLAGS="--cfg uuid_unstable"
 RUN cargo install cargo-chef --debug --locked
 
 # # this is required by the build script of openssl-sys

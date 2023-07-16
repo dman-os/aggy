@@ -1,0 +1,56 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    id as \"id!\",\n    created_at as \"created_at!\",\n    updated_at as \"updated_at!\",\n    email::TEXT as \"email!\",\n    username::TEXT as \"username!\",\n    pic_url\nFROM auth.update_user(\n    $1,\n    $2::TEXT::extensions.CITEXT, \n    $3::TEXT::extensions.CITEXT, \n    $4,\n    $5\n)\n                ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id!",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "created_at!",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 2,
+        "name": "updated_at!",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 3,
+        "name": "email!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "username!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "pic_url",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "823e172455883a9bbd1b48f56e975e975ff33e67b774c5d1d2502dcf8f74a9fd"
+}
