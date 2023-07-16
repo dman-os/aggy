@@ -6,6 +6,7 @@ jobs:
   migrate-aggy-postgres:
     name: Apply migrations for the aggy db
     runs-on: ubuntu-latest
+    environemnt: production
     timeout-minutes: 5
     env:
       FLYWAY_URL: jdbc:postgresql://${{ vars.AGGY_PG_HOST }}:${{ vars.AGGY_PG_PORT }}/${{ vars.AGGY_PG_DB }}?user=${{ vars.AGGY_PG_USER }}&password=${{ secrets.AGGY_PG_PASS }}&sslmode=require
