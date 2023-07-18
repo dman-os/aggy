@@ -15,6 +15,7 @@ mod interlude {
     pub use deps::*;
     pub type BearerToken = axum::headers::Authorization<axum::headers::authorization::Bearer>;
     pub type DiscardBody = axum::extract::BodyStream;
+    pub use common::utils::default;
 
     #[cfg(test)]
     pub use crate::auth::testing::*;
@@ -78,8 +79,8 @@ Notes:
             )
             .paths({
                 let builder = openapi::path::PathsBuilder::new();
-                let builder = user::paths(builder);
-                let builder = auth::paths(builder);
+                let builder = user::paths(builder, "/aggy"); //FIXME: make this dyamic
+                let builder = auth::paths(builder, "/aggy");
                 builder.build()
             })
             .components(Some({

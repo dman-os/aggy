@@ -46,9 +46,15 @@ pub fn components(
     builder
 }
 
-pub fn paths(builder: utoipa::openapi::PathsBuilder) -> utoipa::openapi::PathsBuilder {
+pub fn paths(
+    builder: utoipa::openapi::PathsBuilder,
+    prefix_path: &str,
+) -> utoipa::openapi::PathsBuilder {
     builder.path(
-        common::axum_path_str_to_openapi(authenticate::Authenticate::PATH),
+        format!(
+            "{prefix_path}{}",
+            common::axum_path_str_to_openapi(authenticate::Authenticate::PATH)
+        ),
         authenticate::Authenticate::path_item(),
     )
 }
