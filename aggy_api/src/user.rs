@@ -63,27 +63,45 @@ pub fn components(
         .schemas_from_iter(<list::ListUsersResponse as utoipa::ToSchema>::aliases())
 }
 
-pub fn paths(builder: utoipa::openapi::PathsBuilder) -> utoipa::openapi::PathsBuilder {
+pub fn paths(
+    builder: utoipa::openapi::PathsBuilder,
+    prefix_path: &str,
+) -> utoipa::openapi::PathsBuilder {
     use common::axum_path_str_to_openapi;
     builder
         .path(
-            axum_path_str_to_openapi(get::GetUser::PATH),
+            format!(
+                "{prefix_path}{}",
+                axum_path_str_to_openapi(get::GetUser::PATH)
+            ),
             get::GetUser::path_item(),
         )
         .path(
-            axum_path_str_to_openapi(update::UpdateUser::PATH),
+            format!(
+                "{prefix_path}{}",
+                axum_path_str_to_openapi(update::UpdateUser::PATH)
+            ),
             update::UpdateUser::path_item(),
         )
         .path(
-            axum_path_str_to_openapi(delete::DeleteUser::PATH),
+            format!(
+                "{prefix_path}{}",
+                axum_path_str_to_openapi(delete::DeleteUser::PATH)
+            ),
             delete::DeleteUser::path_item(),
         )
         .path(
-            axum_path_str_to_openapi(create::CreateUser::PATH),
+            format!(
+                "{prefix_path}{}",
+                axum_path_str_to_openapi(create::CreateUser::PATH)
+            ),
             create::CreateUser::path_item(),
         )
         .path(
-            axum_path_str_to_openapi(list::ListUsers::PATH),
+            format!(
+                "{prefix_path}{}",
+                axum_path_str_to_openapi(list::ListUsers::PATH)
+            ),
             list::ListUsers::path_item(),
         )
 }

@@ -21,3 +21,6 @@ gen-sqlx-offline:
   SQLX_OFFLINE_DIR={{SQLX_OFFLINE_DIR}} \
   cargo check
   cp /var/run/media/asdf/Windows/target/aggy/sqlx-final/* .sqlx -r
+
+run-anf:
+  cargo run -p aggynfrens_api

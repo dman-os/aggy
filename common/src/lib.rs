@@ -20,6 +20,7 @@ mod interlude {
     pub use deps::*;
     pub type BearerToken = axum::headers::Authorization<axum::headers::authorization::Bearer>;
     pub type DiscardBody = axum::extract::BodyStream;
+    pub use crate::utils::default;
 }
 use crate::interlude::*;
 
@@ -570,23 +571,50 @@ where
     /// endpoint id coming from [`DocumentedEndpoint::id`]
     fn error_responses() -> Vec<(String, openapi::Response)> {
         let id = Self::id();
+        struct ResponseSummary {
+            descs: std::collections::HashSet<String>,
+            examples: Vec<serde_json::Value>,
+        }
         Self::errors()
             .into_iter()
-            .map(|(desc, example)| {
+            .fold(
+                std::collections::HashMap::new(),
+                |mut out, (desc, example)| {
+                    let summary = out
+                        .entry(Into::<StatusCode>::into(&example).as_u16())
+                        .or_insert_with(|| ResponseSummary {
+                            descs: default(),
+                            examples: vec![],
+                        });
+                    summary.descs.insert(desc.to_owned());
+                    summary
+                        .examples
+                        .push(serde_json::to_value(example).unwrap());
+                    out
+                },
+            )
+            .into_iter()
+            .map(|(code, summary)| {
                 (
-                    Into::<StatusCode>::into(&example).as_u16().to_string(),
+                    code.to_string(),
                     openapi::ResponseBuilder::new()
-                        .description(desc)
-                        .content(
-                            "application/json",
-                            openapi::ContentBuilder::new()
-                                .schema(utoipa::openapi::Ref::from_schema_name(format!(
-                                    "{id}Error"
-                                )))
-                                // .schema(Self::Error::ref_or_schema())
-                                .example(Some(serde_json::to_value(example).unwrap()))
-                                .build(),
-                        )
+                        .description(summary.descs.into_iter().fold(String::new(), |out, desc| {
+                            if out.is_empty() {
+                                desc
+                            } else {
+                                format!("{out} | {desc}")
+                            }
+                        }))
+                        .content("application/json", {
+                            let mut builder = openapi::ContentBuilder::new().schema(
+                                utoipa::openapi::Ref::from_schema_name(format!("{id}Error")),
+                            );
+                            // .schema(Self::Error::ref_or_schema())
+                            for example in summary.examples {
+                                builder = builder.example(Some(example));
+                            }
+                            builder.build()
+                        })
                         .build(),
                 )
             })
