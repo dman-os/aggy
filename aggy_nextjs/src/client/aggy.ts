@@ -20,7 +20,7 @@ const createUserResponseValidator = zod.object({
   updatedAt: zod.number(),
   id: zod.string(),
   username: zod.string(),
-  picUrl: zod.string(),
+  picUrl: zod.string().nullish(),
 });
 
 export class AggyClient {
@@ -34,6 +34,9 @@ export class AggyClient {
       `${this.baseUrl}/users`,
       {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
         body: JSON.stringify(input)
       }
     );

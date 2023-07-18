@@ -1,16 +1,9 @@
 "use client"
 
-import { NextResponse } from 'next/server'
-import * as zod from "zod";
-import { fromZodError } from "zod-validation-error";
-
 import { RadFControl, RadFField, RadFLabel, RadFMessage, RadFRoot, RadFSubmit } from "@/app/_components/radix"
 import {
-  CreateUserInput,
   MAX_LENGTH_PASSWORD, MAX_LENGTH_USERNAME, MIN_LENGTH_PASSWORD, MIN_LENGTH_USERNAME
 } from "@/client";
-import { dbg } from "@/utils";
-import { apiClient } from '@/client/index.server';
 import { register } from './actions';
 import { useState } from 'react';
 
