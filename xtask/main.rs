@@ -38,7 +38,7 @@ fn main() -> Result<(), AnyErr> {
         Commands::Test { args } => {
             if is_nextest_avail() {
                 assert!(
-                    show_cmd(cargo_cmd().args(&[
+                    show_cmd(cargo_cmd().args([
                         "nextest",
                         "run",
                         if let Some(ref args) = args {
@@ -54,7 +54,7 @@ fn main() -> Result<(), AnyErr> {
                 );
             } else {
                 assert!(
-                    show_cmd(cargo_cmd().args(&["test"]))
+                    show_cmd(cargo_cmd().args(["test"]))
                         .status()
                         .unwrap()
                         .success(),
@@ -64,14 +64,14 @@ fn main() -> Result<(), AnyErr> {
         }
         Commands::PreCommit {} => {
             assert!(
-                show_cmd(cargo_cmd().args(&["fmt",]))
+                show_cmd(cargo_cmd().args(["fmt",]))
                     .status()
                     .unwrap()
                     .success(),
                 "failed to cargo fmt"
             );
             assert!(
-                show_cmd(cargo_cmd().args(&["sqlx", "prepare", "--merged", "--", "--lib",]))
+                show_cmd(cargo_cmd().args(["sqlx", "prepare", "--merged", "--", "--lib",]))
                     .status()
                     .unwrap()
                     .success(),
@@ -80,7 +80,7 @@ fn main() -> Result<(), AnyErr> {
             assert!(
                 show_cmd(
                     cargo_cmd()
-                        .args(&["run", "--bin", "print_oas",])
+                        .args(["run", "--bin", "print_oas",])
                         .stdout(std::fs::File::create("api.oas3.json")?)
                 )
                 .status()
@@ -91,7 +91,7 @@ fn main() -> Result<(), AnyErr> {
         }
         Commands::ResetDb { yes: no_confirm } => {
             let mut sqlx_cmd = cargo_cmd();
-            sqlx_cmd.args(&["sqlx", "database", "reset"]);
+            sqlx_cmd.args(["sqlx", "database", "reset"]);
             if no_confirm {
                 sqlx_cmd.arg("-y");
             }
@@ -100,7 +100,7 @@ fn main() -> Result<(), AnyErr> {
                 "failed to reset database"
             );
             assert!(
-                show_cmd(Command::new("podman").args(&[
+                show_cmd(Command::new("podman").args([
                     "exec",
                     "-i",
                     "postgres-server-dev", // FIXME: read this name from the compose file
@@ -125,7 +125,7 @@ type AnyErr = Box<dyn std::error::Error>;
 /*
 fn build_bin(name: &str, release: bool) {
     let mut build_cmd = cargo_cmd();
-    build_cmd.args(&["build", "--bin", name]);
+    build_cmd.args(["build", "--bin", name]);
     if release {
         build_cmd.arg("--release");
     }

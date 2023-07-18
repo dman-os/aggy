@@ -72,6 +72,10 @@ impl crate::AuthenticatedEndpoint for ListUsers {
         Request(request): Self::Request,
     ) -> Result<Self::Response, Self::Error> {
         validator::Validate::validate(&request).map_err(ValidationErrors::from)?;
+
+        let crate::Db::Pg { db_pool } = &cx.db /* else {
+            return Err(Error::Internal{message: "this endpoint is not implemented for this db".to_string()});
+        } */;
         let (cursor_clause, sorting_field, sorting_order, filter) = request
             .after_cursor
             .map(|cursor| (true, cursor))
@@ -171,7 +175,7 @@ LIMIT $2 + 1
         )
         .bind(filter.as_ref())
         .bind(limit as i64)
-        .fetch_all(&cx.db_pool)
+        .fetch_all(db_pool)
         .await;
         match results {
             Ok(results) => {

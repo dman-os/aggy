@@ -46,18 +46,22 @@ impl crate::AuthenticatedEndpoint for DeleteUser {
     ) -> Result<Self::Response, Self::Error> {
         let id = request.id;
 
-        let was_deleted = sqlx::query!(
-            r#"
+        match &cx.db {
+            crate::Db::Pg { db_pool } => {
+                let was_deleted = sqlx::query!(
+                    r#"
 SELECT auth.delete_user($1)
             "#,
-            &id
-        )
-        .fetch_one(&cx.db_pool)
-        .await
-        .map_err(|err| Error::Internal {
-            message: format!("db error: {err}"),
-        })?;
-        tracing::trace!(?was_deleted);
+                    &id
+                )
+                .fetch_one(db_pool)
+                .await
+                .map_err(|err| Error::Internal {
+                    message: format!("db error: {err}"),
+                })?;
+                tracing::trace!(?was_deleted);
+            }
+        };
         Ok(common::NoContent)
     }
 }

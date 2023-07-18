@@ -44,8 +44,14 @@ pub struct Config {
 
 #[derive(Debug)]
 pub struct Context {
-    pub db_pool: sqlx::postgres::PgPool,
     pub config: Config,
+    pub db: Db,
+}
+
+#[derive(Debug)]
+#[non_exhaustive]
+pub enum Db {
+    Pg { db_pool: sqlx::postgres::PgPool },
 }
 
 pub type SharedContext = std::sync::Arc<Context>;

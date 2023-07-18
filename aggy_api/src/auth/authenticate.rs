@@ -45,8 +45,10 @@ impl Endpoint for Authenticate {
         cx: &Self::Cx,
         request: Self::Request,
     ) -> Result<Self::Response, Self::Error> {
-        let result = sqlx::query!(
-            r#"
+        let (user_id, pass_hash) = match &cx.db {
+            crate::Db::Pg { db_pool } => {
+                let result = sqlx::query!(
+                    r#"
 SELECT user_id, pass_hash
 FROM auth.credentials
 WHERE user_id = (
@@ -55,28 +57,32 @@ WHERE user_id = (
     WHERE email = $1::TEXT::extensions.CITEXT OR username = $1::TEXT::extensions.CITEXT
 )
         "#,
-            &request.identifier,
-        )
-        .fetch_one(&cx.db_pool)
-        .await
-        .map_err(|err| match &err {
-            sqlx::Error::RowNotFound => Error::CredentialsRejected,
-            _ => Error::Internal {
-                message: format!("db error: {err}"),
-            },
-        })?;
+                    &request.identifier,
+                )
+                .fetch_one(db_pool)
+                .await
+                .map_err(|err| match &err {
+                    sqlx::Error::RowNotFound => Error::CredentialsRejected,
+                    _ => Error::Internal {
+                        message: format!("db error: {err}"),
+                    },
+                })?;
+                (result.user_id, result.pass_hash)
+            }
+        };
         let pass_valid =
-            argon2::verify_encoded(&result.pass_hash[..], request.password.as_bytes()).unwrap();
+            argon2::verify_encoded(&pass_hash[..], request.password.as_bytes()).unwrap();
         if !pass_valid {
             return Err(Error::CredentialsRejected);
         }
 
-        let user_id = result.user_id;
         let expires_at =
             time::OffsetDateTime::now_utc().saturating_add(cx.config.auth_token_lifespan);
         let token = uuid::Uuid::new_v4().to_string();
-        sqlx::query!(
-            r#"
+        match &cx.db {
+            crate::Db::Pg { db_pool } => {
+                sqlx::query!(
+                    r#"
 INSERT INTO auth.sessions (token, user_id, expires_at)
 VALUES (
     $1,
@@ -84,15 +90,17 @@ VALUES (
     $3
 )
         "#,
-            &token,
-            &user_id,
-            &expires_at
-        )
-        .execute(&cx.db_pool)
-        .await
-        .map_err(|err| Error::Internal {
-            message: format!("db error: {err}"),
-        })?;
+                    &token,
+                    &user_id,
+                    &expires_at
+                )
+                .execute(db_pool)
+                .await
+                .map_err(|err| Error::Internal {
+                    message: format!("db error: {err}"),
+                })?;
+            }
+        };
 
         Ok(Response {
             user_id,

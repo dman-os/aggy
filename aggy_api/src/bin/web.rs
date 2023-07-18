@@ -26,7 +26,10 @@ fn main() {
             };
             let db_url = common::utils::get_env_var("DATABASE_URL").unwrap_or_log();
             let db_pool = sqlx::PgPool::connect(&db_url).await.unwrap_or_log();
-            let cx = Context { db_pool, config };
+            let cx = Context {
+                db: Db::Pg { db_pool },
+                config,
+            };
             let cx = std::sync::Arc::new(cx);
             let app = axum::Router::new()
                 .merge(utoipa_swagger_ui::SwaggerUi::new("/swagger-ui/*tail").url(

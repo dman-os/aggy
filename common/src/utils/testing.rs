@@ -72,7 +72,7 @@ impl<'a> sqlx::migrate::MigrationSource<'a> for FlywayMigrationSource<'a> {
             }
             fn walk_dir<'a>(
                 path: &'a std::path::Path,
-                mut cx: &'a mut WalkCx,
+                cx: &'a mut WalkCx,
             ) -> futures::future::BoxFuture<'a, Result<(), sqlx::error::BoxDynError>> {
                 Box::pin(async move {
                     let mut s = tokio::fs::read_dir(path).await?;
@@ -80,7 +80,7 @@ impl<'a> sqlx::migrate::MigrationSource<'a> for FlywayMigrationSource<'a> {
                         // std::fs::metadata traverses symlinks
                         let metadata = std::fs::metadata(&entry.path())?;
                         if metadata.is_dir() {
-                            walk_dir(&entry.path(), &mut cx).await?;
+                            walk_dir(&entry.path(), cx).await?;
                             return Ok(());
                         }
                         if !metadata.is_file() {
@@ -103,7 +103,6 @@ impl<'a> sqlx::migrate::MigrationSource<'a> for FlywayMigrationSource<'a> {
                         let version: i64 = if parts[0].starts_with('m') {
                             let Ok(v_parts) = parts[0][1..]
                                 .split('.')
-                                .into_iter()
                                 .map(|str| str.parse())
                                 .collect::<Result<Vec<i64>, _>>() else
                             {

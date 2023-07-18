@@ -28,7 +28,10 @@ fn main() {
             };
             let db_url = common::utils::get_env_var("AGGY_DATABASE_URL").unwrap_or_log();
             let db_pool = common::sqlx::PgPool::connect(&db_url).await.unwrap_or_log();
-            let aggy_cx = Context { db_pool, config };
+            let aggy_cx = Context {
+                db: Db::Pg { db_pool },
+                config,
+            };
             let aggy_cx = std::sync::Arc::new(aggy_cx);
             let app = axum::Router::new()
                 .route(
