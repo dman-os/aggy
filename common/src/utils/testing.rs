@@ -147,7 +147,6 @@ impl<'a> sqlx::migrate::MigrationSource<'a> for FlywayMigrationSource<'a> {
                 }),
             )
             .await?;
-            tracing::info!(?migrations, ?self, "migrations");
             // ensure that we are sorted by `VERSION ASC`
             migrations.sort_by_key(|m| m.version);
 

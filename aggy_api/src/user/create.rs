@@ -71,7 +71,7 @@ SELECT
     email::TEXT as "email!",
     username::TEXT as "username!",
     pic_url
-FROM auth.create_user($1, $2::TEXT::extensions.CITEXT, $3::TEXT::extensions.CITEXT, $4)
+FROM auth.create_user($1, $2::TEXT::extensions.citext, $3::TEXT::extensions.citext, $4)
                 "#,
                     // FIXME: replace with v7
                     &uuid::Uuid::new_v4(),
@@ -233,7 +233,7 @@ mod tests {
     }
 
     common::table_tests! {
-        create_user_validate,
+        validate,
         (request, err_field),
         {
             match validator::Validate::validate(&request) {
@@ -252,7 +252,7 @@ mod tests {
         }
     }
 
-    create_user_validate! {
+    validate! {
         rejects_too_long_usernames: (
             Request {
                 username: "shrt".into(),
@@ -318,7 +318,7 @@ mod tests {
         ),
     }
 
-    macro_rules! create_user_integ {
+    macro_rules! integ {
         ($(
             $name:ident: {
                 status: $status:expr,
@@ -347,7 +347,7 @@ mod tests {
         };
     }
 
-    create_user_integ! {
+    integ! {
         works: {
             status: http::StatusCode::CREATED,
             body: fixture_request_json(),
@@ -382,6 +382,7 @@ mod tests {
                     let body = resp.into_body();
                     let body = hyper::body::to_bytes(body).await.unwrap_or_log();
                     let body = serde_json::from_slice(&body).unwrap_or_log();
+                    tracing::info!(?body, "test");
                     check_json(
                         ("expected", &req_body_json.remove_keys_from_obj(&["password"])),
                         ("response", &body),
