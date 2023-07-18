@@ -13,3 +13,7 @@ export async function unface(data: FormData) {
 export async function comment(data: FormData) {
   dbg({ data: [...data.entries()] });
 }
+
+export async function login(data: FormData) {
+  dbg({ data: [...data.entries()] });
+}

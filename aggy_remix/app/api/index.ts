@@ -1,6 +1,10 @@
+import { AggyClient } from "./aggy";
 import type { QueryClient } from "@tanstack/react-query";
 import type * as T from "./types";
 import { queryFamily } from "~/utils/atoms";
+import * as zod from "zod";
+
+export * from "./aggy";
 // import { queryFamily } from "~/utils/atoms";
 
 export class ApiClient {
@@ -32,6 +36,7 @@ export const getTopPosts = queryFamily<void, ApiResponse<"getTopPosts">>(
   })
 );
 
+
 const topPostsSeed = [
   {
     title: "DIY RISC-V in the bomblands.",
@@ -43,10 +48,36 @@ const topPostsSeed = [
         alias: "bigyoyo"
       },
       topFaces: {
-        "b": { count: 12314, userFacedAtTs: Date.now() },
+        "b": { count: 12314, ts: Date.now() },
         "(\\\"_\")=b": { count: 1 },
-      } as Record<string, T.Face>
+      } as Record<string, T.FaceSummary>
     },
+    children: [
+      {
+        content: '<p>This is a comment</p>',
+        author: {
+          pkey: "dadyoyo1",
+          alias: "bigyoyo"
+        },
+        topFaces: {
+          "b": { count: 12314, ts: Date.now() },
+          "(\\\"_\")=b": { count: 1 },
+        } as Record<string, T.FaceSummary>,
+        children: [
+          {
+            content: '<p>This is also a comment</p>',
+            author: {
+              pkey: "dadyoyo1",
+              alias: "bigyoyo"
+            },
+            topFaces: {
+              "b": { count: 12314, ts: Date.now() },
+              "(\\\"_\")=b": { count: 1 },
+            } as Record<string, T.FaceSummary>
+          }
+        ] as T.Epigram[]
+      }
+    ]
   },
   {
     title: "Apple is in talks to buy Capitol Hill",
@@ -72,11 +103,11 @@ const topPostsSeed = [
       },
       topFaces: {
         "b": { count: 123 }
-      } as Record<string, T.Face>
+      } as Record<string, T.FaceSummary>
     },
   },
 ];
-const topPosts: T.AggyPost[] = [
+export const topPosts: T.AggyPost[] = [
   ...topPostsSeed,
   ...topPostsSeed,
   ...topPostsSeed,
@@ -86,14 +117,27 @@ const topPosts: T.AggyPost[] = [
     const epigramId = `epigram_${idx}`;
     const commentsLink = `p/${id}`
     const link = seed.link ?? commentsLink;
+    let commentIdx = 0;
+    function seedToEpigram(seed: Partial<T.Epigram>): T.Epigram {
+      return {
+        ...seed,
+        content_mime: 'text/html',
+        ts: Date.now() - Math.random() * 111222,
+        id: `epigram_${commentIdx++ ^ idx}`,
+        children: (seed.children ?? []).map(seedToEpigram),
+      } as T.Epigram;
+    }
     arr.push({
       id,
       link,
       ...seed,
       epigram: {
         id: epigramId,
-        body_html: `<a href="${link}">${seed.title}</a>`,
+        ts: Date.now() - Math.random() * 111222,
+        content: `<a href="${link}">${seed.title}</a>`,
+        content_mime: 'text/html',
         ...seed.epigram,
+        children: (seed.children ?? []).map(seedToEpigram)
       },
     });
     return arr;

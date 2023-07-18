@@ -573,7 +573,7 @@ where
         let id = Self::id();
         struct ResponseSummary {
             descs: std::collections::HashSet<String>,
-            examples: Vec<serde_json::Value>,
+            examples: Vec<(String, serde_json::Value)>,
         }
         Self::errors()
             .into_iter()
@@ -589,7 +589,7 @@ where
                     summary.descs.insert(desc.to_owned());
                     summary
                         .examples
-                        .push(serde_json::to_value(example).unwrap());
+                        .push((desc.to_owned(), serde_json::to_value(example).unwrap()));
                     out
                 },
             )
@@ -606,14 +606,22 @@ where
                             }
                         }))
                         .content("application/json", {
-                            let mut builder = openapi::ContentBuilder::new().schema(
-                                utoipa::openapi::Ref::from_schema_name(format!("{id}Error")),
-                            );
-                            // .schema(Self::Error::ref_or_schema())
-                            for example in summary.examples {
-                                builder = builder.example(Some(example));
-                            }
-                            builder.build()
+                            openapi::ContentBuilder::new()
+                                .schema(utoipa::openapi::Ref::from_schema_name(format!(
+                                    "{id}Error"
+                                )))
+                                .examples_from_iter(summary.examples.into_iter().map(
+                                    |(desc, value)| {
+                                        (
+                                            desc.clone(),
+                                            openapi::example::ExampleBuilder::new()
+                                                .summary(desc)
+                                                .value(Some(value))
+                                                .build(),
+                                        )
+                                    },
+                                ))
+                                .build()
                         })
                         .build(),
                 )

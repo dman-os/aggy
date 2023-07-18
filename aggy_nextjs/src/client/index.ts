@@ -1,7 +1,13 @@
+export * from "./aggy";
+import { AggyClient } from "./aggy";
 import type * as T from "./types";
+import * as zod from "zod";
+
 
 export class ApiClient {
-  constructor() { }
+  constructor(
+    public aggy: AggyClient
+  ) { }
 
   async getTopPosts() {
     return topPosts;
