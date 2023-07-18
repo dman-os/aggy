@@ -23,13 +23,18 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={""/* inter.className */}>
-        <header className="flex gap-2 px-2rem py-2rem">
-          <Link href="/">Aggy</Link>
-          <nav className="mx-a flex gap-2">
-            <a href="new">new</a>
-            <a href="comments">comments</a>
-            <a href="submit">submit</a>
+        <header className="flex justify-between gap-2 px-2rem py-2rem">
+          <Link href="/">aggy</Link>
+          <nav className="flex gap-2">
+            <Link href="/new">new</Link>
+            <Link href="/comments">comments</Link>
+            <Link href="/submit">submit</Link>
           </nav>
+          <div>
+            <Link href="/login">login</Link>
+            /
+            <Link href="/register">register</Link>
+          </div>
         </header>
         <main>
           {children}
