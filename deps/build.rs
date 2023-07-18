@@ -12,8 +12,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 std::path::PathBuf::from(std::env::var("CARGO_MANIFEST_DIR")?).join("Cargo.toml"),
             )?
             .dependencies
-            .iter()
-            .map(|(name, _)| {
+            .keys()
+            .map(|name| {
                 format!("pub use {};\n", {
                     // if alias specified, use that
                     name.replace('-', "_")

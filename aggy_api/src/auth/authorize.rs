@@ -33,23 +33,26 @@ impl common::Authorize for crate::Context {
     async fn authorize(&self, request: Self::Request) -> Result<Self::Info, Self::Error> {
         // TODO: roles support
         // TODO: cache db access
-        let session = sqlx::query_as!(
-            super::Session,
-            r#"
+
+        let session = match &self.db {
+            crate::Db::Pg { db_pool } => sqlx::query_as!(
+                super::Session,
+                r#"
 SELECT * 
 FROM auth.sessions
 WHERE token = $1
             "#,
-            &request.auth_token.token()
-        )
-        .fetch_one(&self.db_pool)
-        .await
-        .map_err(|err| match err {
-            sqlx::Error::RowNotFound => Error::InvalidToken,
-            _ => Error::Internal {
-                message: format!("{err}"),
-            },
-        })?;
+                &request.auth_token.token()
+            )
+            .fetch_one(db_pool)
+            .await
+            .map_err(|err| match err {
+                sqlx::Error::RowNotFound => Error::InvalidToken,
+                _ => Error::Internal {
+                    message: format!("{err}"),
+                },
+            })?,
+        };
         if session.expires_at < time::OffsetDateTime::now_utc() {
             return Err(Error::InvalidToken);
         }

@@ -105,10 +105,12 @@ impl AuthenticatedEndpoint for UpdateUser {
             )
             .unwrap_or_log()
         });
-        let null_str = "NULL".into();
-        let user = sqlx::query_as!(
-            super::User,
-            r#"
+        let user = match &cx.db {
+            crate::Db::Pg { db_pool } => {
+                let null_str = "NULL".into();
+                sqlx::query_as!(
+                    super::User,
+                    r#"
 SELECT
     id as "id!",
     created_at as "created_at!",
@@ -124,35 +126,37 @@ FROM auth.update_user(
     $5
 )
                 "#,
-            &request.user_id.unwrap(),
-            &request.username.as_ref().unwrap_or(&null_str),
-            &request.email.as_ref().unwrap_or(&null_str),
-            &request.pic_url.as_ref().unwrap_or(&null_str),
-            &pass_hash.as_ref().unwrap_or(&null_str)
-        )
-        .fetch_one(&cx.db_pool)
-        .await
-        .map_err(|err| match &err {
-            sqlx::Error::RowNotFound => Error::NotFound {
-                id: request.user_id.unwrap(),
-            },
-            sqlx::Error::Database(boxed) if boxed.constraint().is_some() => {
-                match boxed.constraint().unwrap() {
-                    "users_username_key" => Error::UsernameOccupied {
-                        username: request.username.unwrap(),
+                    &request.user_id.unwrap(),
+                    &request.username.as_ref().unwrap_or(&null_str),
+                    &request.email.as_ref().unwrap_or(&null_str),
+                    &request.pic_url.as_ref().unwrap_or(&null_str),
+                    &pass_hash.as_ref().unwrap_or(&null_str)
+                )
+                .fetch_one(db_pool)
+                .await
+                .map_err(|err| match &err {
+                    sqlx::Error::RowNotFound => Error::NotFound {
+                        id: request.user_id.unwrap(),
                     },
-                    "users_email_key" => Error::EmailOccupied {
-                        email: request.email.unwrap(),
-                    },
+                    sqlx::Error::Database(boxed) if boxed.constraint().is_some() => {
+                        match boxed.constraint().unwrap() {
+                            "users_username_key" => Error::UsernameOccupied {
+                                username: request.username.unwrap(),
+                            },
+                            "users_email_key" => Error::EmailOccupied {
+                                email: request.email.unwrap(),
+                            },
+                            _ => Error::Internal {
+                                message: format!("db error: {err}"),
+                            },
+                        }
+                    }
                     _ => Error::Internal {
                         message: format!("db error: {err}"),
                     },
-                }
+                })?
             }
-            _ => Error::Internal {
-                message: format!("db error: {err}"),
-            },
-        })?;
+        };
         // TODO: email notification, account activation
         Ok(user.into())
     }

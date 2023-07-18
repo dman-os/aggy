@@ -8,7 +8,9 @@ pub mod testing {
 
     pub fn state_fn(testing: &common::utils::testing::TestContext) -> crate::SharedContext {
         std::sync::Arc::new(crate::Context {
-            db_pool: testing.db_pool.clone().unwrap(),
+            db: crate::Db::Pg {
+                db_pool: testing.db_pool.clone().unwrap(),
+            },
             config: crate::Config {
                 pass_salt_hash: b"sea brine".to_vec(),
                 argon2_conf: argon2::Config::default(),

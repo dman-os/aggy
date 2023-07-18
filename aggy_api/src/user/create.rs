@@ -56,9 +56,14 @@ impl Endpoint for CreateUser {
         )
         .unwrap_or_log();
 
-        let user = sqlx::query_as!(
-            super::User,
-            r#"
+        /* match &cx.db {
+            crate::Db::Postgres { db_pool } => {},
+        }; */
+        let user = match &cx.db {
+            crate::Db::Pg { db_pool } => {
+                sqlx::query_as!(
+                    super::User,
+                    r#"
 SELECT
     id as "id!",
     created_at as "created_at!",
@@ -68,35 +73,47 @@ SELECT
     pic_url
 FROM auth.create_user($1, $2::TEXT::extensions.CITEXT, $3::TEXT::extensions.CITEXT, $4)
                 "#,
-            // FIXME: replace with v7
-            &uuid::Uuid::new_v4(),
-            &request.username,
-            &request.email,
-            &pass_hash
-        )
-        .fetch_one(&cx.db_pool)
-        .await
-        .map_err(|err| match &err {
-            sqlx::Error::Database(boxed) if boxed.constraint().is_some() => {
-                match boxed.constraint().unwrap() {
-                    "users_username_key" => Error::UsernameOccupied {
-                        username: request.username,
-                    },
-                    "users_email_key" => Error::EmailOccupied {
-                        email: request.email,
-                    },
+                    // FIXME: replace with v7
+                    &uuid::Uuid::new_v4(),
+                    &request.username,
+                    &request.email,
+                    &pass_hash
+                )
+                .fetch_one(db_pool)
+                .await
+                .map_err(|err| match &err {
+                    sqlx::Error::Database(boxed) if boxed.constraint().is_some() => {
+                        match boxed.constraint().unwrap() {
+                            "users_username_key" => Error::UsernameOccupied {
+                                username: request.username,
+                            },
+                            "users_email_key" => Error::EmailOccupied {
+                                email: request.email,
+                            },
+                            _ => Error::Internal {
+                                message: format!("db error: {err}"),
+                            },
+                        }
+                    }
                     _ => Error::Internal {
                         message: format!("db error: {err}"),
                     },
-                }
+                })?
             }
-            _ => Error::Internal {
-                message: format!("db error: {err}"),
-            },
-        })?;
+        };
         // TODO: email notification, account activation
         Ok(user.into())
     }
+}
+
+#[async_trait::async_trait]
+trait CreateUserRepo {
+    async fn exec(
+        id: uuid::Uuid,
+        username: &str,
+        email: &str,
+        pass_hash: &str,
+    ) -> Result<Response, Error>;
 }
 
 impl From<&Error> for StatusCode {

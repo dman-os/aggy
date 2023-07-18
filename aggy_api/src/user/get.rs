@@ -50,9 +50,10 @@ impl crate::AuthenticatedEndpoint for GetUser {
     ) -> Result<Self::Response, Self::Error> {
         let id = request.id;
 
-        sqlx::query_as!(
-            User,
-            r#"
+        match &cx.db {
+            crate::Db::Pg { db_pool } => sqlx::query_as!(
+                User,
+                r#"
 SELECT 
     id,
     created_at,
@@ -63,17 +64,18 @@ SELECT
 FROM auth.users
 WHERE id = $1::uuid
             "#,
-            &id
-        )
-        .fetch_one(&cx.db_pool)
-        .await
-        .map(|val| val.into())
-        .map_err(|err| match err {
-            sqlx::Error::RowNotFound => Error::NotFound { id },
-            _ => Error::Internal {
-                message: format!("db error: {err}"),
-            },
-        })
+                &id
+            )
+            .fetch_one(db_pool)
+            .await
+            .map(|val| val.into())
+            .map_err(|err| match err {
+                sqlx::Error::RowNotFound => Error::NotFound { id },
+                _ => Error::Internal {
+                    message: format!("db error: {err}"),
+                },
+            }),
+        }
     }
 }
 
