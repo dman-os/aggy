@@ -121,18 +121,19 @@ where
     for<'a> &'a Self::Error: Into<StatusCode>,
 {
     type SharedCx: std::ops::Deref<Target = Self::Cx> + Send + Sync + Clone;
-    const METHOD: Method;
-    const PATH: &'static str;
     type HttpRequest: axum::extract::FromRequest<Self::SharedCx, axum::body::Body>
         + Send
         + Sync
         + 'static;
-    // FIXME: this is superflous and can be covered by the `response` call
+    const METHOD: Method;
+    const PATH: &'static str;
     const SUCCESS_CODE: StatusCode = StatusCode::OK;
     // type HttpResponse: axum::response::IntoResponse;
 
-    /// TODO: consider making this a `From` trait bound on `Self::Parameters`
+    /// TODO: consider making this a `From` trait bound on `Self::HttpRequest`
     fn request(params: Self::HttpRequest) -> Result<Self::Request, Self::Error>;
+    /// TODO: consider constraining `Self::Response` to `Serialize` and providing
+    /// a default impl using `Json`
     fn response(resp: Self::Response) -> HttpResponse;
 
     /// This actally need not be a method but I guess it allows for easy behavior
@@ -779,6 +780,26 @@ where
     pub fn new(inner: T) -> Self {
         Self { inner }
     }
+
+    // pub fn add_to_router<S>(self, router: axum::Router<S>) -> axum::Router<S>
+    // where
+    //     T::SharedCx: FromRef<S>,
+    //     S: Clone + Send + Sync,
+    // {
+    //     use utoipa::openapi::PathItemType;
+    //     let method = match T::METHOD {
+    //         PathItemType::Get => axum::routing::get(self),
+    //         PathItemType::Post => axum::routing::post(self),
+    //         PathItemType::Put => axum::routing::put(self),
+    //         PathItemType::Delete => axum::routing::delete(self),
+    //         PathItemType::Options => axum::routing::options(self),
+    //         PathItemType::Head => axum::routing::head(self),
+    //         PathItemType::Patch => axum::routing::patch(self),
+    //         PathItemType::Trace => axum::routing::trace(self),
+    //         PathItemType::Connect => todo!(),
+    //     };
+    //     router.route(T::PATH, method)
+    // }
 }
 
 impl<T> Clone for EndpointWrapper<T>
@@ -825,6 +846,7 @@ where
             PathItemType::Connect => todo!(),
         };
         axum::Router::new().route(T::PATH, method)
+        // wrapper.add_to_router(axum::Router::new())
     }
 }
 

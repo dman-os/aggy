@@ -5,6 +5,10 @@ set dotenv-load
 default:
   @just --list --unsorted
 
+# psql from the db running in the compose launched pg container
+psql:
+  podman exec -it aggy-postgres-server-dev psql -U aggy
+
 # The flyway cli tool
 flyway *ARGS:
   # FIXME: podman compose doesn't support such invocations?

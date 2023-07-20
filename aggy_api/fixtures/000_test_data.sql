@@ -27,6 +27,15 @@ DO $body$
             le_user.id,
             CURRENT_TIMESTAMP + interval '7 days'
         );
+        INSERT INTO web.sessions (
+            id, user_id, expires_at, ip_addr, user_agent
+        ) VALUES (
+            '13e4cbdf-aa7c-43ca-990c-a8b468d44616'::uuid,
+            le_user.id,
+            CURRENT_TIMESTAMP + interval '7 days',
+            '127.0.0.1'::inet,
+            'ViolaWWW'
+        );
     END;
 $body$ LANGUAGE PLpgSQL;
 
@@ -96,6 +105,15 @@ DO $body$
             'ebd3b465-be17-4077-bc4a-add9f76b5028',
             le_user.id,
             CURRENT_TIMESTAMP + interval '7 days'
+        );
+        INSERT INTO web.sessions (
+            id, user_id, expires_at, ip_addr, user_agent
+        ) VALUES (
+            '0a7f6a02-43a4-4738-b70c-0d66eb24459f'::uuid,
+            le_user.id,
+            CURRENT_TIMESTAMP + interval '7 days',
+            '8.0.0.1'::inet,
+            'ViolaWWW'
         );
     END;
 $body$ LANGUAGE PLpgSQL;

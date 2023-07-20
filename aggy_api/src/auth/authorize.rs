@@ -1,5 +1,5 @@
-//! Check if the auth policy allows the provded [`User`] is allowed
-//! to perform the provided [`Action`] on the provided [`Resource`]
+//! Check if the auth policy allows the [`User`] owning the provided auth_token
+//! is allowed to perform the provided [`Action`] on the provided [`Resource`]
 
 use crate::interlude::*;
 

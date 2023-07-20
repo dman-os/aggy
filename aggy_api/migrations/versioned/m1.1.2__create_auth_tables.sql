@@ -4,13 +4,15 @@ CREATE SCHEMA IF NOT EXISTS
 COMMENT ON
   SCHEMA auth IS 'Iss self document, don''t you think?';
 
+CALL util.apply_default_schema_config('auth');
+
 CREATE TABLE auth.users (
     -- always put created_at and updated_at at top
     created_at      TIMESTAMPTZ         NOT NULL    DEFAULT CURRENT_TIMESTAMP
 ,   updated_at      TIMESTAMPTZ         NOT NULL    DEFAULT CURRENT_TIMESTAMP
 
 
-,   id            UUID                        NOT NULL
+,   id            UUID                        NOT NULL  DEFAULT uuid_generate_v7()
 ,   username      extensions.citext           NOT NULL
 ,   email         extensions.citext           NOT NULL
 ,   pic_url       TEXT

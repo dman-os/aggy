@@ -21,6 +21,26 @@ COMMENT ON
 
 ---
 
+-- Lifted from https://github.com/jetpack-io/typeid-sql/blob/d72825bc2a009771fe4c0cadc5a278a14676b251/sql/01_uuidv7.sql
+-- Function to generate new v7 UUIDs.
+-- In the future we might want use an extension: https://github.com/fboulnois/pg_uuidv7
+-- Or, once the UUIDv7 spec is finalized, it will probably make it into the 'uuid-ossp' extension
+-- and a custom function will no longer be necessary.
+CREATE OR REPLACE FUNCTION uuid_generate_v7() RETURNS UUID
+  AS $$
+  DECLARE
+    unix_ts_ms BYTEA;
+    uuid_bytes BYTEA;
+  BEGIN
+    unix_ts_ms = SUBSTRING(INT8SEND(FLOOR(EXTRACT(EPOCH FROM clock_timestamp()) * 1000)::BIGINT) FROM 3);
+    uuid_bytes = UUID_SEND(gen_random_uuid());
+    uuid_bytes = OVERLAY(uuid_bytes placing unix_ts_ms from 1 for 6);
+    uuid_bytes = SET_BYTE(uuid_bytes, 6, (b'0111' || GET_BYTE(uuid_bytes, 6)::BIT(4))::BIT(8)::INT);
+    return ENCODE(uuid_bytes, 'hex')::UUID;
+  END
+  $$
+  LANGUAGE PLPGSQL VOLATILE;
+
 CREATE OR REPLACE FUNCTION 
     util.maintain_updated_at()
   RETURNS TRIGGER AS 

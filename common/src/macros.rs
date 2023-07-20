@@ -409,9 +409,11 @@ macro_rules! integration_table_tests {
                         .unwrap_or_log();
 
                     let (head, body) = res.into_parts();
-                    let response_json: Option<serde_json::Value> = hyper::body::to_bytes(body)
-                        .await
-                        .ok()
+                    let response_bytes = hyper::body::to_bytes(body)
+                            .await
+                            .ok();
+                    let response_json: Option<serde_json::Value> = response_bytes
+                        .as_ref()
                         .and_then(|body|
                             serde_json::from_slice(&body).ok()
                         );
@@ -425,7 +427,8 @@ macro_rules! integration_table_tests {
                     assert_eq!(
                         head.status,
                         status_code,
-                        "response: {head:?}\n{response_json:?}"
+                        "response: {head:?}\n{response_json:?}\n{:?}",
+                        if response_json.is_some() {None} else {Some(response_bytes)}
                     );
 
                     let check_json: Option<serde_json::Value> = $crate::optional_expr!($($check_json)?);

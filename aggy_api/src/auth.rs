@@ -13,6 +13,8 @@ pub struct Session {
 pub enum Resource {
     User { id: uuid::Uuid },
     Users,
+    WebSession { id: uuid::Uuid },
+    WebSessions,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -25,6 +27,7 @@ pub enum Action {
 #[derive(Debug, Clone, Copy)]
 pub enum Role {
     SuperAdmin,
+    Service,
 }
 
 pub const TAG: common::Tag = common::Tag {
@@ -34,6 +37,7 @@ pub const TAG: common::Tag = common::Tag {
 
 pub mod authenticate;
 pub mod authorize;
+pub mod authorize_service;
 
 pub fn router() -> axum::Router<SharedContext> {
     axum::Router::new().merge(EndpointWrapper::new(authenticate::Authenticate))
