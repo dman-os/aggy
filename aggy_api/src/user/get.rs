@@ -8,23 +8,23 @@ pub struct GetUser;
 #[derive(Debug)]
 pub struct Request {
     pub auth_token: BearerToken,
-    pub id: uuid::Uuid,
+    pub id: Uuid,
 }
+
+pub type Response = Ref<super::User>;
 
 #[derive(Debug, thiserror::Error, serde::Serialize, utoipa::ToSchema)]
 #[serde(crate = "serde", tag = "error", rename_all = "camelCase")]
 pub enum Error {
-    #[error("not found at id: {id:?}")]
-    NotFound { id: uuid::Uuid },
-    #[error("acess denied")]
+    #[error("user not found at id: {id:?}")]
+    NotFound { id: Uuid },
+    #[error("{self:?}")]
     AccessDenied,
     #[error("internal server error: {message:?}")]
     Internal { message: String },
 }
 
 crate::impl_from_auth_err!(Error);
-
-pub type Response = Ref<super::User>;
 
 #[async_trait::async_trait]
 impl crate::AuthenticatedEndpoint for GetUser {
@@ -45,7 +45,7 @@ impl crate::AuthenticatedEndpoint for GetUser {
     async fn handle(
         &self,
         cx: &Self::Cx,
-        _accessing_user: uuid::Uuid,
+        _accessing_user: Uuid,
         request: Self::Request,
     ) -> Result<Self::Response, Self::Error> {
         let id = request.id;
@@ -95,7 +95,7 @@ impl HttpEndpoint for GetUser {
     const PATH: &'static str = "/users/:id";
 
     type SharedCx = SharedContext;
-    type HttpRequest = (TypedHeader<BearerToken>, Path<uuid::Uuid>, DiscardBody);
+    type HttpRequest = (TypedHeader<BearerToken>, Path<Uuid>, DiscardBody);
 
     fn request(
         (TypedHeader(token), Path(id), _): Self::HttpRequest,
@@ -197,7 +197,7 @@ mod tests {
             }),
         },
         fails_if_not_found: {
-            uri: format!("/users/{}", uuid::Uuid::new_v4()),
+            uri: format!("/users/{}", Uuid::new_v4()),
             auth_token: USER_01_SESSION.into(), // FIXME: use super user session
             status: StatusCode::NOT_FOUND,
             check_json: serde_json::json!({

@@ -1,5 +1,4 @@
 CREATE FUNCTION auth.create_user(
-  id UUID,
   username extensions.CITEXT,
   email extensions.CITEXT,
   pass_hash TEXT
@@ -10,9 +9,9 @@ AS $body$
         le_user    auth.users;
     BEGIN
         INSERT INTO auth.users (
-            id, username, email
+            username, email
         ) VALUES (
-            id, username, email
+            username, email
         ) RETURNING * INTO le_user;
         INSERT INTO auth.credentials (
             user_id, pass_hash
@@ -80,6 +79,14 @@ AS $body$
           RETURNING *
         )
         INSERT INTO auth.sessions_deleted (row) 
+        SELECT row_to_json(d.*)::jsonb FROM deleted AS d;
+
+        WITH deleted AS (
+          DELETE FROM web.sessions
+          WHERE user_id = target_id
+          RETURNING *
+        )
+        INSERT INTO web.sessions_deleted (row) 
         SELECT row_to_json(d.*)::jsonb FROM deleted AS d;
 
         WITH deleted AS (

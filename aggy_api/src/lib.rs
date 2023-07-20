@@ -5,17 +5,24 @@
 use dylink;
 
 mod interlude {
-    pub use crate::{Context, SharedContext};
+    pub use deps::*;
+
+    pub use crate::{Context, ServiceContext, SharedContext, SharedServiceContext};
+
     pub use axum::{extract::Path, http, response::IntoResponse, Json, TypedHeader};
+    pub use serde::{Deserialize, Serialize};
+    pub use uuid::Uuid;
+    pub use validator::Validate;
+
+    pub use common::utils::default;
     pub use common::{
         utils::ValidationErrors, AuthedUid, AuthenticatedEndpoint, Authorize, DocumentedEndpoint,
         Endpoint, EndpointWrapper, ErrorResponse, HttpEndpoint, HttpResponse, Method, Ref,
         StatusCode, Tag,
     };
-    pub use deps::*;
+
     pub type BearerToken = axum::headers::Authorization<axum::headers::authorization::Bearer>;
     pub type DiscardBody = axum::extract::BodyStream;
-    pub use common::utils::default;
 
     #[cfg(test)]
     pub use crate::auth::testing::*;
@@ -30,6 +37,7 @@ pub mod auth;
 mod macros;
 pub mod user;
 pub mod utils;
+pub mod web;
 
 use crate::utils::*;
 
@@ -40,6 +48,8 @@ pub struct Config {
     pub pass_salt_hash: Vec<u8>,
     pub argon2_conf: argon2::Config<'static>,
     pub auth_token_lifespan: time::Duration,
+    pub web_session_lifespan: time::Duration,
+    pub service_secret: String,
 }
 
 #[derive(Debug)]
@@ -56,12 +66,27 @@ pub enum Db {
 
 pub type SharedContext = std::sync::Arc<Context>;
 
+#[derive(educe::Educe, Clone)]
+#[educe(Deref, DerefMut)]
+pub struct ServiceContext(pub SharedContext);
+
+#[derive(educe::Educe, Clone)]
+#[educe(Deref, DerefMut)]
+pub struct SharedServiceContext(pub ServiceContext);
+
+impl axum::extract::FromRef<SharedContext> for SharedServiceContext {
+    fn from_ref(input: &SharedContext) -> Self {
+        Self(ServiceContext(input.clone()))
+    }
+}
 // shadow_rs::shadow!(build);
 
-pub fn router() -> axum::Router<SharedContext> {
+pub fn router(state: SharedContext) -> axum::Router {
     axum::Router::new()
         .merge(user::router())
         .merge(auth::router())
+        .with_state(state.clone())
+        .merge(web::router().with_state(SharedServiceContext(ServiceContext(state))))
 }
 
 pub struct ApiDoc;
@@ -87,6 +112,7 @@ Notes:
                 let builder = openapi::path::PathsBuilder::new();
                 let builder = user::paths(builder, "/aggy"); //FIXME: make this dyamic
                 let builder = auth::paths(builder, "/aggy");
+                let builder = web::paths(builder, "/aggy");
                 builder.build()
             })
             .components(Some({
@@ -99,11 +125,13 @@ Notes:
                 ]);
                 let builder = user::components(builder);
                 let builder = auth::components(builder);
+                let builder = web::components(builder);
                 builder.build()
             }))
             .tags(Some([
                 auth::TAG.into(),
                 user::TAG.into(),
+                web::TAG.into(),
                 common::DEFAULT_TAG.into(),
             ]))
             .build();
