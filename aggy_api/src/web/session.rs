@@ -21,6 +21,7 @@ pub struct Session {
 
 pub mod create;
 pub mod get;
+pub mod update;
 
 pub mod testing {
     pub const USER_01_WEB_SESSION: &str = "13e4cbdf-aa7c-43ca-990c-a8b468d44616";
