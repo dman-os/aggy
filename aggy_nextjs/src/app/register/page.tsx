@@ -1,3 +1,4 @@
+import { getCsrfToken } from '@/utils/index.server';
 import { RegisterForm } from './components';
 
 export default function RegisterPage({
@@ -10,7 +11,7 @@ export default function RegisterPage({
 
   return (
     <>
-      <RegisterForm redirectTo={redirectTo} />
+      <RegisterForm redirectTo={redirectTo} csrfToken={getCsrfToken()} />
     </>
   );
 }

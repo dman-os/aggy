@@ -71,7 +71,7 @@ impl AuthenticatedEndpoint for CreateWebSession {
 INSERT INTO web.sessions (
     user_id, ip_addr, user_agent, expires_at
 ) VALUES (
-    $1::TEXT::UUID, $2::TEXT::INET, $3, $4
+    $1::UUID, $2::TEXT::INET, $3, $4
 ) RETURNING 
     id as "id!"
 ,   user_id
@@ -82,11 +82,7 @@ INSERT INTO web.sessions (
 ,   user_agent as "user_agent!"
     ;
                 "#,
-                    &request
-                        .user_id
-                        .as_ref()
-                        .map(|id| id.to_string())
-                        .unwrap_or("NULL".to_string()),
+                    request.user_id.as_ref(),
                     &request.ip_addr.to_string(),
                     &request.user_agent,
                     &expires_at,
@@ -201,9 +197,9 @@ mod tests {
     macro_rules! integ {
         ($(
             $name:ident: {
-                status: $status:expr,
                 body: $json_body:expr,
                 auth_token: $auth_token:expr,
+                status: $status:expr,
                 $(check_json: $check_json:expr,)?
                 $(extra_assertions: $extra_fn:expr,)?
             },
@@ -231,9 +227,9 @@ mod tests {
 
     integ! {
         works: {
-            status: http::StatusCode::CREATED,
             body: fixture_request_json(),
             auth_token: SERVICE_SECRET.into(),
+            status: http::StatusCode::CREATED,
             check_json: fixture_request_json(),
             extra_assertions: &|EAArgs { test_cx, response_json, .. }| {
                 Box::pin(async move {
@@ -273,12 +269,18 @@ mod tests {
                 })
             },
         },
+        user_id_is_optional: {
+            body: fixture_request_json().remove_keys_from_obj(&["userId"]),
+            auth_token: SERVICE_SECRET.into(),
+            status: http::StatusCode::CREATED,
+            check_json: fixture_request_json().remove_keys_from_obj(&["userId"]),
+        },
         fails_if_user_not_found: {
-            status: http::StatusCode::NOT_FOUND,
             body: fixture_request_json().destructure_into_self(
                 serde_json::json!({ "userId": Uuid::new_v4() })
             ),
             auth_token: SERVICE_SECRET.into(),
+            status: http::StatusCode::NOT_FOUND,
             check_json: serde_json::json!({
                 "error": "userNotFound"
             }),

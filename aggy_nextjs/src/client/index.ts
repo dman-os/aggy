@@ -1,7 +1,7 @@
 export * from "./aggy";
+export * as T from "./types";
 import { AggyClient } from "./aggy";
 import type * as T from "./types";
-import * as zod from "zod";
 
 
 export class ApiClient {

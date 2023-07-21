@@ -5,7 +5,7 @@ import Link from 'next/link';
 import * as T from "@/client/types";
 import * as Actions from "@/app/api/actions";
 
-export function PostStatusLines({ post }: { post: T.AggyPost }) {
+export function PostStatusLines({ post, csrfToken }: { post: T.AggyPost, csrfToken: string, }) {
   return <div className="postStatusLines">
     <div className="postStatusDetailsLine flex gap-1">
       <span>
@@ -25,6 +25,7 @@ export function PostStatusLines({ post }: { post: T.AggyPost }) {
             // : `/api/doface?epigram_id=${post.epigram.id}&rxn=${rxn}`
           }
         >
+          <input type="hidden" name="csrf_token" value={csrfToken} />
           <input name="epigramId" type="hidden" value={post.epigram.id} />
           <input name="rxn" type="hidden" value={rxn} />
           <button
