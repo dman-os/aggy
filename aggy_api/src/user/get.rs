@@ -58,7 +58,7 @@ SELECT
     id,
     created_at,
     updated_at,
-    email::TEXT as "email!",
+    email::TEXT as "email?",
     username::TEXT as "username!",
     pic_url
 FROM auth.users
@@ -120,7 +120,7 @@ impl DocumentedEndpoint for GetUser {
             id: Default::default(),
             created_at: time::OffsetDateTime::now_utc(),
             updated_at: time::OffsetDateTime::now_utc(),
-            email: USER_01_EMAIL.into(),
+            email: Some(USER_01_EMAIL.into()),
             username: USER_01_USERNAME.into(),
             pic_url: Some("https:://example.com/picture.jpg".into()),
         }]

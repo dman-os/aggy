@@ -1,0 +1,59 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nUPDATE web.sessions \nSET \n    user_id = COALESCE($2, user_id)\nWHERE id = $1 \nRETURNING\n    id as \"id!\"\n,   user_id\n,   created_at as \"created_at!\"\n,   updated_at as \"updated_at!\"\n,   expires_at as \"expires_at!\"\n,   ip_addr as \"ip_addr!: std::net::IpAddr\"\n,   user_agent as \"user_agent!\"\n    ;\n                ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id!",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "user_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "created_at!",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 3,
+        "name": "updated_at!",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 4,
+        "name": "expires_at!",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 5,
+        "name": "ip_addr!: std::net::IpAddr",
+        "type_info": "Inet"
+      },
+      {
+        "ordinal": 6,
+        "name": "user_agent!",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "42e89f43d98ea38bafbb45923363da15eb6c2b64d5213e68f7bb53aae6ca070b"
+}

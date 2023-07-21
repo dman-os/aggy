@@ -11,9 +11,7 @@ psql:
 
 # The flyway cli tool
 flyway *ARGS:
-  # FIXME: podman compose doesn't support such invocations?
-
-  docker compose run --rm flyway {{ARGS}}
+  podman-compose  --profile tools run --rm flyway {{ARGS}}
 
 # Apply migrations to database.
 db-mig:
@@ -21,7 +19,7 @@ db-mig:
 
 # Apply migrations to database.
 db-reset:
-  cargo sqlx database drop
+  cargo sqlx database drop -y
   cargo sqlx database create
   @just flyway migrate
 

@@ -14,13 +14,13 @@ CREATE TABLE auth.users (
 
 ,   id            UUID                        NOT NULL  DEFAULT uuid_generate_v7()
 ,   username      extensions.citext           NOT NULL
-,   email         extensions.citext           NOT NULL
+,   email         extensions.citext
 ,   pic_url       TEXT
 
     -- all constraints (besides not null) go after the columns
 ,   PRIMARY KEY(id)
 ,   UNIQUE(username)
-,   UNIQUE(email)
+-- ,   UNIQUE(email)
 );
 
 --- default config should be applied on all tables unless a good reason exists not to

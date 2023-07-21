@@ -85,7 +85,9 @@ RETURNING
                 .fetch_one(db_pool)
                 .await
                 .map_err(|err| match &err {
-                    sqlx::Error::RowNotFound => Error::NotFound { id: request.session_id.unwrap() },
+                    sqlx::Error::RowNotFound => Error::NotFound {
+                        id: request.session_id.unwrap(),
+                    },
                     sqlx::Error::Database(boxed) if boxed.constraint().is_some() => {
                         match boxed.constraint().unwrap() {
                             "sessions_user_id_fkey" => Error::UserNotFound {

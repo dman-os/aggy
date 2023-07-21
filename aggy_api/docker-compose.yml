@@ -33,14 +33,17 @@ services:
     image: docker.io/flyway/flyway:9.18-alpine
     container_name: flyway
     profiles:
-      - disabled
+      - tools
     network_mode: host
     # restart: unless-stopped
     volumes:
       - ..:/flyway/conf:ro
       - ./migrations/:/flyway/sql:ro
     environment:
-      FLYWAY_URL: ${FLYWAY_URL:-jdbc:postgresql://localhost:5432/${DB_USERNAME?"DB_USERNAME not set."}?user=${DB_USERNAME?"DB_USERNAME not set."}&password=${DB_PASSWORD?"DB_PASSWORD not set."}}
+      # FIXME: podman-compose doesn't support recursive variable expansion
+      # FLYWAY_URL: ${FLYWAY_URL:-jdbc:postgresql://localhost:5432/${DB_USERNAME?"DB_USERNAME not set."\}?user=${DB_USERNAME?"DB_USERNAME not set."\}&password=${DB_PASSWORD?"DB_PASSWORD not set."\}}
+      FLYWAY_URL: ${FLYWAY_URL:-jdbc:postgresql://localhost:5432/aggy?user=aggy&password=password}
+
 
 networks:
   net-one:
