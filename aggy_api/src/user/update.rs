@@ -10,9 +10,9 @@ pub struct UpdateUser;
 #[serde(crate = "serde", rename_all = "camelCase")]
 pub struct Request {
     #[serde(skip)]
-    auth_token: Option<BearerToken>,
+    pub auth_token: Option<BearerToken>,
     #[serde(skip)]
-    user_id: Option<uuid::Uuid>,
+    pub user_id: Option<uuid::Uuid>,
     #[validate(length(min = 5, max = 25), regex(path = "crate::user::USERNAME_REGEX"))]
     pub username: Option<String>,
     #[validate(email)]
@@ -36,7 +36,7 @@ impl Request {
 pub enum Error {
     #[error("not found at id: {id:?}")]
     NotFound { id: uuid::Uuid },
-    #[error("acess denied")]
+    #[error("access denied")]
     AccessDenied,
     #[error("username occupied: {username:?}")]
     UsernameOccupied { username: String },
@@ -177,10 +177,11 @@ impl From<&Error> for StatusCode {
 }
 
 impl HttpEndpoint for UpdateUser {
+    type SharedCx = SharedContext;
+
     const METHOD: Method = Method::Patch;
     const PATH: &'static str = "/users/:id";
 
-    type SharedCx = SharedContext;
     type HttpRequest = (TypedHeader<BearerToken>, Path<uuid::Uuid>, Json<Request>);
 
     fn request(

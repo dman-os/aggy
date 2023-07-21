@@ -1,9 +1,7 @@
 "use client"
 
 import { RadFControl, RadFField, RadFLabel, RadFMessage, RadFRoot, RadFSubmit } from "@/app/_components/radix"
-import {
-  MAX_LENGTH_PASSWORD, MAX_LENGTH_USERNAME, MIN_LENGTH_PASSWORD, MIN_LENGTH_USERNAME
-} from "@/client";
+import { T } from "@/client";
 import { register } from './actions';
 import { useState } from 'react';
 
@@ -12,8 +10,10 @@ type ActionErr<A extends (...args: any) => any> = DePromisify<ReturnType<A>> | u
 
 export function RegisterForm({
   redirectTo,
+  csrfToken,
 }: {
   redirectTo: string,
+  csrfToken: string,
 }) {
   const [serverErr, setServerErr] = useState<ActionErr<typeof register>>(undefined);
 
@@ -23,6 +23,7 @@ export function RegisterForm({
         <form
           action={async (formData) => setServerErr(await register(formData))}
           className="flex flex-col gap-2">
+          <input type="hidden" name="csrf_token" value={csrfToken} />
           <h3>Register</h3>
           {
             serverErr?.formError &&
@@ -43,8 +44,8 @@ export function RegisterForm({
               <RadFControl
                 type="text"
                 required
-                minLength={MIN_LENGTH_USERNAME}
-                maxLength={MAX_LENGTH_USERNAME}
+                minLength={T.MIN_LENGTH_USERNAME}
+                maxLength={T.MAX_LENGTH_USERNAME}
                 className="w-full"
               />
             </div>
@@ -53,10 +54,10 @@ export function RegisterForm({
                 Username is missing.
               </RadFMessage>
               <RadFMessage match="tooShort">
-                Username is too short. Must be at least {MIN_LENGTH_USERNAME} chars long..
+                Username is too short. Must be at least {T.MIN_LENGTH_USERNAME} chars long..
               </RadFMessage>
               <RadFMessage match="tooLong">
-                Username is too short. Must be at least {MAX_LENGTH_USERNAME} chars long..
+                Username is too short. Must be at least {T.MAX_LENGTH_USERNAME} chars long..
               </RadFMessage>
             </div>
           </RadFField>
@@ -92,8 +93,8 @@ export function RegisterForm({
               <RadFControl
                 type="password"
                 required
-                minLength={MIN_LENGTH_PASSWORD}
-                maxLength={MAX_LENGTH_PASSWORD}
+                minLength={T.MIN_LENGTH_PASSWORD}
+                maxLength={T.MAX_LENGTH_PASSWORD}
                 className="w-full"
               />
             </div>
@@ -102,10 +103,10 @@ export function RegisterForm({
                 Password is missing.
               </RadFMessage>
               <RadFMessage match="tooShort">
-                Password is too short. Must be at least {MIN_LENGTH_PASSWORD} chars long..
+                Password is too short. Must be at least {T.MIN_LENGTH_PASSWORD} chars long..
               </RadFMessage>
               <RadFMessage match="tooLong">
-                Password is too short. Must be at least {MAX_LENGTH_PASSWORD} chars long..
+                Password is too short. Must be at least {T.MAX_LENGTH_PASSWORD} chars long..
               </RadFMessage>
             </div>
           </RadFField>

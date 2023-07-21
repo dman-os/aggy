@@ -5,6 +5,7 @@ import { PostStatusLines } from "@/app/_components";
 import { topPosts } from "@/client";
 import * as T from "@/client/types";
 import * as Actions from "@/app/api/actions"
+import { getCsrfToken } from "@/utils/index.server";
 
 export default function PostDetails(
   { params }: { params: { 'post-id': string } }
@@ -15,8 +16,9 @@ export default function PostDetails(
   }
   return <div className="flex flex-col gap-2">
     <div dangerouslySetInnerHTML={{ __html: post.epigram.content }}></div>
-    <PostStatusLines post={post} />
+    <PostStatusLines post={post} csrfToken={getCsrfToken()} />
     <form action={Actions.comment} className="addCommentForm flex flex-col gap-1">
+      <input type="hidden" name="csrf_token" value={getCsrfToken()} />
       <input name="parentId" value={post.epigram.id} type="hidden" />
       <textarea name="content" cols={80} rows={5} />
       <button type="submit" className="self-start p-1 b-1 rounded-2 b-outline hover:b-black dark:hover:b-white">
@@ -26,13 +28,13 @@ export default function PostDetails(
     <br />
     <ul>{post.epigram.children.map(
       eg => <li key={eg.id}>
-        <Comment epigram={eg} />
+        <Comment epigram={eg} csrfToken={getCsrfToken()} />
       </li>
     )}</ul>
   </div>
 }
 
-function Comment({ epigram }: { epigram: T.Epigram }) {
+function Comment({ epigram, csrfToken }: { epigram: T.Epigram, csrfToken: string, }) {
   return <>
     <div>
       <Link href={`/user/${epigram.author.pkey}`}>{epigram.author.alias}</Link>
@@ -47,6 +49,7 @@ function Comment({ epigram }: { epigram: T.Epigram }) {
             userFacedAtTs ? Actions.unface : Actions.doface
           }
         >
+          <input type="hidden" name="csrf_token" value={csrfToken} />
           <input name="epigramId" type="hidden" value={epigram.id} />
           <input name="rxn" type="hidden" value={rxn} />
           <button
@@ -65,7 +68,7 @@ function Comment({ epigram }: { epigram: T.Epigram }) {
     <ul className="ml-4">
       {
         epigram.children.map(
-          eg => <li key={eg.id}> <Comment epigram={eg} /> </li>
+          eg => <li key={eg.id}> <Comment epigram={eg} csrfToken={getCsrfToken()} /> </li>
         )
       }
     </ul>

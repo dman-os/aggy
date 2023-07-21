@@ -98,10 +98,10 @@ impl From<&Error> for StatusCode {
 }
 
 impl HttpEndpoint for GetWebSession {
+    type SharedCx = SharedServiceContext;
     const METHOD: Method = Method::Get;
     const PATH: &'static str = "/web/sessions/:id";
 
-    type SharedCx = SharedServiceContext;
     type HttpRequest = (TypedHeader<BearerToken>, Path<Uuid>, DiscardBody);
 
     fn request(
