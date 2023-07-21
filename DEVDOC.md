@@ -2,7 +2,7 @@
 
 ## To-do
 
-- [ ] Move to flywaydb for migrations
+- [x] Move to flywaydb for migrations
 - [ ] Some policy when the API is unable to contact other services
   - [ ] Attempt to recreate connections?
 - [ ] Auth
@@ -13,7 +13,7 @@
   - [ ] 2FA
   - [ ] SSO
 - [ ] Logging
-- [ ] Replace UUIDs with HashIDs for user id
+- [ ] Replace UUIDs with HashIDs for user id?
 
 - [ ] Consider SurrealDb
 

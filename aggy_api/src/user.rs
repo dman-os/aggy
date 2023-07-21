@@ -15,7 +15,7 @@ pub struct User {
     #[serde(with = "time::serde::timestamp")]
     pub updated_at: time::OffsetDateTime,
     #[schema(example = "alice@example.com")]
-    pub email: String,
+    pub email: Option<String>,
     #[schema(example = "hunter2")]
     pub username: String,
     pub pic_url: Option<String>,

@@ -1,3 +1,3 @@
 #![allow(unused_imports, clippy::single_component_path_imports)]
-use deps;
 use common;
+use deps;

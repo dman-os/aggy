@@ -9,7 +9,7 @@ pub struct Request {
     #[validate(length(min = 5, max = 25), regex(path = "crate::user::USERNAME_REGEX"))]
     pub username: String,
     #[validate(email)]
-    pub email: String,
+    pub email: Option<String>,
     #[validate(length(min = 8))]
     pub password: String,
 }
@@ -64,13 +64,13 @@ SELECT
     id as "id!",
     created_at as "created_at!",
     updated_at as "updated_at!",
-    email::TEXT as "email!",
+    email::TEXT as "email?",
     username::TEXT as "username!",
     pic_url
-FROM auth.create_user($1::TEXT::extensions.citext, $2::TEXT::extensions.citext, $3)
+FROM auth.create_user($1, $2, $3)
                 "#,
                 &request.username,
-                &request.email,
+                request.email.as_ref(),
                 &pass_hash
             )
             .fetch_one(db_pool)
@@ -82,7 +82,7 @@ FROM auth.create_user($1::TEXT::extensions.citext, $2::TEXT::extensions.citext, 
                             username: request.username,
                         },
                         "users_email_key" => Error::EmailOccupied {
-                            email: request.email,
+                            email: request.email.unwrap(),
                         },
                         _ => Error::Internal {
                             message: format!("db error: {err}"),
@@ -137,7 +137,7 @@ impl DocumentedEndpoint for CreateUser {
             id: Default::default(),
             created_at: time::OffsetDateTime::now_utc(),
             updated_at: time::OffsetDateTime::now_utc(),
-            email: USER_01_EMAIL.into(),
+            email: Some(USER_01_EMAIL.into()),
             username: USER_01_USERNAME.into(),
             pic_url: Some("https:://example.com/picture.jpg".into()),
         }]
@@ -294,7 +294,7 @@ mod tests {
         ),
         rejects_invalid_emails: (
             Request {
-                email: "invalid".into(),
+                email: Some("invalid".into()),
                 ..fixture_request()
             },
             Some("email"),
@@ -372,6 +372,11 @@ mod tests {
                     );
                 })
             },
+        },
+        email_is_optional: {
+            status: http::StatusCode::CREATED,
+            body: fixture_request_json().remove_keys_from_obj(&["email"]),
+            check_json: fixture_request_json().remove_keys_from_obj(&["password", "email"]),
         },
         fails_if_username_occupied: {
             status: http::StatusCode::BAD_REQUEST,

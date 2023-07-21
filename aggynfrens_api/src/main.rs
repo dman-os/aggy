@@ -58,13 +58,12 @@ fn main() {
                         config,
                     };
                     let cx = std::sync::Arc::new(cx);
-                    axum::Router::new()
-                        .merge(aggy_api::router(cx))
+                    axum::Router::new().merge(aggy_api::router(cx))
                 })
-                .merge(utoipa_swagger_ui::SwaggerUi::new("/swagger-ui").url(
-                    "/aggy/openapi.json",
-                    <ApiDoc as utoipa::OpenApi>::openapi(),
-                ))
+                .merge(
+                    utoipa_swagger_ui::SwaggerUi::new("/swagger-ui")
+                        .url("/aggy/openapi.json", <ApiDoc as utoipa::OpenApi>::openapi()),
+                )
                 .layer(
                     tower_http::trace::TraceLayer::new_for_http()
                         .on_response(

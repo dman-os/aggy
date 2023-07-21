@@ -152,7 +152,7 @@ SELECT
     id,
     created_at,
     updated_at,
-    email::TEXT as "email!",
+    email::TEXT as "email?",
     username::TEXT as "username!",
     pic_url
 FROM (
@@ -190,7 +190,7 @@ LIMIT $2 + 1
                             created_at: row.try_get("created_at")?,
                             updated_at: row.try_get("updated_at")?,
                             username: row.try_get("username!")?,
-                            email: row.try_get("email!")?,
+                            email: row.try_get("email?")?,
                             pic_url: row.try_get("pic_url")?,
                         })
                     })
@@ -282,7 +282,7 @@ impl DocumentedEndpoint for ListUsers {
                     id: Default::default(),
                     created_at: time::OffsetDateTime::now_utc(),
                     updated_at: time::OffsetDateTime::now_utc(),
-                    email: USER_01_EMAIL.into(),
+                    email: Some(USER_01_EMAIL.into()),
                     username: USER_01_USERNAME.into(),
                     pic_url: Some("https:://example.com/picture.jpg".into()),
                 },
@@ -290,7 +290,7 @@ impl DocumentedEndpoint for ListUsers {
                     id: Default::default(),
                     created_at: time::OffsetDateTime::now_utc(),
                     updated_at: time::OffsetDateTime::now_utc(),
-                    email: USER_02_EMAIL.into(),
+                    email: Some(USER_02_EMAIL.into()),
                     username: USER_02_USERNAME.into(),
                     pic_url: None,
                 },
