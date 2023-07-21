@@ -11,6 +11,7 @@ pub fn router() -> axum::Router<SharedServiceContext> {
     axum::Router::new()
         .merge(EndpointWrapper::new(session::get::GetWebSession))
         .merge(EndpointWrapper::new(session::create::CreateWebSession))
+        .merge(EndpointWrapper::new(session::update::UpdateWebSession))
 }
 
 pub fn components(
@@ -18,10 +19,8 @@ pub fn components(
 ) -> utoipa::openapi::ComponentsBuilder {
     let builder = session::get::GetWebSession::components(builder);
     let builder = session::create::CreateWebSession::components(builder);
-    builder
-        .schemas_from_iter([
-            <session::Session as utoipa::ToSchema>::schema(),
-        ])
+    let builder = session::update::UpdateWebSession::components(builder);
+    builder.schemas_from_iter([<session::Session as utoipa::ToSchema>::schema()])
 }
 
 pub fn paths(
@@ -42,6 +41,13 @@ pub fn paths(
                 common::axum_path_str_to_openapi(session::create::CreateWebSession::PATH)
             ),
             session::create::CreateWebSession::path_item(),
+        )
+        .path(
+            format!(
+                "{prefix_path}{}",
+                common::axum_path_str_to_openapi(session::update::UpdateWebSession::PATH)
+            ),
+            session::update::UpdateWebSession::path_item(),
         )
 }
 

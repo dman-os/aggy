@@ -9,3 +9,4 @@ path = "lib.rs"
 
 [dependencies]
 deps = { workspace = true }
+common = { workspace = true }
