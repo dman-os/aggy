@@ -7,14 +7,21 @@ edition.workspace = true
 path = "lib.rs"
 
 [dependencies]
-regex = "1.6"
+
 rand = "*"
+brotli = "*"
+hex = "*"
+base64 = "*"
+ed25519-dalek = { version = "2.0.0-rc.3", features = ["serde", "rand_core"] }
+argon2 = { package = "rust-argon2", version = "1.0.0" }
+
+regex = "1.6"
 # chrono = "0.4"
 time = { version = "0.3", features = ["serde"] }
+uuid = { version = "1", features = ["v4", "v7", "fast-rng", "serde"] }
 # flume = "0.10"
 once_cell = "1.8"
 parking_lot = "*"
-# parking_lot = { version = "0.11", features = ["nightly"] }
 # bitflags = "*"
 # downcast-rs = "1.2"
 # itertools = "*"
@@ -62,14 +69,9 @@ utoipa = { version = "3.3", features = [
   "preserve_order",
 ] }
 utoipa-swagger-ui = { version = "3.1", features = ["axum"] }
-uuid = { version = "1", features = ["v4", "v7", "fast-rng", "serde"] }
 
 # config = { version = "0.13", features = ["toml"] }
 dotenvy = "0.15"
-
-argon2 = { package = "rust-argon2", version = "1.0.0" }
-brotli = "*"
-base64 = "*"
 
 redis = { version = "0.23.0", features = [
   "tokio-comp",
@@ -78,7 +80,6 @@ redis = { version = "0.23.0", features = [
   "connection-manager",
 ] }
 bb8-redis = "0.13.1"
-# ipnetwork = "0.20.0"
 
 [build-dependencies]
 cargo_toml = "0.15.3"

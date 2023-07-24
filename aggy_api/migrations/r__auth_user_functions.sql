@@ -1,7 +1,9 @@
 CREATE FUNCTION auth.create_user(
-  username TEXT,
-  email TEXT,
-  pass_hash TEXT
+  username TEXT
+, email TEXT
+, pass_hash TEXT
+, pub_key BYTEA
+, pri_key BYTEA
 )
 RETURNS auth.users
 AS $body$
@@ -9,9 +11,15 @@ AS $body$
         le_user    auth.users;
     BEGIN
         INSERT INTO auth.users (
-            username, email
+            username
+            ,email
+            ,pub_key
+            ,pri_key
         ) VALUES (
-            username::extensions.citext, email::extensions.citext
+            username::extensions.citext
+            ,email::extensions.citext
+            ,pub_key
+            ,pri_key
         ) RETURNING * INTO le_user;
         INSERT INTO auth.credentials (
             user_id, pass_hash

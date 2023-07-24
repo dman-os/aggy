@@ -7,7 +7,7 @@ use axum::{
 use utoipa::openapi;
 
 pub use axum::http::StatusCode;
-pub use sqlx;
+// pub use sqlx;
 pub use validator;
 
 pub mod macros;

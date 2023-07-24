@@ -55,12 +55,13 @@ impl crate::AuthenticatedEndpoint for GetUser {
                 User,
                 r#"
 SELECT 
-    id,
-    created_at,
-    updated_at,
-    email::TEXT as "email?",
-    username::TEXT as "username!",
-    pic_url
+    id
+    ,created_at
+    ,updated_at
+    ,email::TEXT as "email?"
+    ,username::TEXT as "username!"
+    ,'f' || encode(pub_key, 'hex') as "pub_key!"
+    ,pic_url
 FROM auth.users
 WHERE id = $1::uuid
             "#,
@@ -123,6 +124,11 @@ impl DocumentedEndpoint for GetUser {
             email: Some(USER_01_EMAIL.into()),
             username: USER_01_USERNAME.into(),
             pic_url: Some("https:://example.com/picture.jpg".into()),
+            pub_key: crate::utils::encode_hex_multibase(
+                ed25519_dalek::SigningKey::generate(&mut rand::thread_rng())
+                    .verifying_key()
+                    .to_bytes(),
+            ),
         }]
         .into_iter()
         .map(serde_json::to_value)

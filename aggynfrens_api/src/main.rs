@@ -52,7 +52,7 @@ fn main() {
                             .unwrap_or_log(),
                     };
                     let db_url = common::utils::get_env_var("AGGY_DATABASE_URL").unwrap_or_log();
-                    let db_pool = common::sqlx::PgPool::connect(&db_url).await.unwrap_or_log();
+                    let db_pool = sqlx::PgPool::connect(&db_url).await.unwrap_or_log();
                     let cx = Context {
                         db: Db::Pg { db_pool },
                         config,
