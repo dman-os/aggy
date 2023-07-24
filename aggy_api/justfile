@@ -9,6 +9,10 @@ default:
 psql:
   podman exec -it aggy-postgres-server-dev psql -U aggy
 
+# psql command but fit for redirects
+psql-tty *ARGS:
+  podman exec -i aggy-postgres-server-dev psql -U aggy {{ARGS}}
+
 # The flyway cli tool
 flyway *ARGS:
   podman-compose  --profile tools run --rm flyway {{ARGS}}

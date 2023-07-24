@@ -19,6 +19,7 @@ pub struct User {
     #[schema(example = "hunter2")]
     pub username: String,
     pub pic_url: Option<String>,
+    pub pub_key: String,
 }
 
 pub use list::UserSortingField;

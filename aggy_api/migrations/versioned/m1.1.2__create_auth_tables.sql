@@ -13,9 +13,11 @@ CREATE TABLE auth.users (
 
 
 ,   id            UUID                        NOT NULL  DEFAULT uuid_generate_v7()
-,   username      extensions.citext           NOT NULL
-,   email         extensions.citext
+,   username      extensions.CITEXT           NOT NULL
+,   email         extensions.CITEXT
 ,   pic_url       TEXT
+,   pub_key       BYTEA                       NOT NULL
+,   pri_key       BYTEA                       NOT NULL
 
     -- all constraints (besides not null) go after the columns
 ,   PRIMARY KEY(id)

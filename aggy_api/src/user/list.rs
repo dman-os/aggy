@@ -149,12 +149,13 @@ impl crate::AuthenticatedEndpoint for ListUsers {
             format!(
                 r#"
 SELECT 
-    id,
-    created_at,
-    updated_at,
-    email::TEXT as "email?",
-    username::TEXT as "username!",
-    pic_url
+    id
+    ,created_at
+    ,updated_at
+    ,email::TEXT as "email?"
+    ,username::TEXT as "username!"
+    ,'f' || encode(pub_key, 'hex') as "pub_key!"
+    ,pic_url
 FROM (
     SELECT *
     FROM auth.users
@@ -192,6 +193,7 @@ LIMIT $2 + 1
                             username: row.try_get("username!")?,
                             email: row.try_get("email?")?,
                             pic_url: row.try_get("pic_url")?,
+                            pub_key: row.try_get("pub_key!")?,
                         })
                     })
                     .collect::<Result<Vec<_>, _>>()
@@ -285,6 +287,11 @@ impl DocumentedEndpoint for ListUsers {
                     email: Some(USER_01_EMAIL.into()),
                     username: USER_01_USERNAME.into(),
                     pic_url: Some("https:://example.com/picture.jpg".into()),
+                    pub_key: crate::utils::encode_hex_multibase(
+                        ed25519_dalek::SigningKey::generate(&mut rand::thread_rng())
+                            .verifying_key()
+                            .to_bytes(),
+                    ),
                 },
                 User {
                     id: Default::default(),
@@ -293,6 +300,11 @@ impl DocumentedEndpoint for ListUsers {
                     email: Some(USER_02_EMAIL.into()),
                     username: USER_02_USERNAME.into(),
                     pic_url: None,
+                    pub_key: crate::utils::encode_hex_multibase(
+                        ed25519_dalek::SigningKey::generate(&mut rand::thread_rng())
+                            .verifying_key()
+                            .to_bytes(),
+                    ),
                 },
             ],
         }]
