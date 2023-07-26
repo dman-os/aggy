@@ -7,6 +7,7 @@
   - [ ] Attempt to recreate connections?
 - [ ] Auth
   - [ ] Redis session cache
+    - [ ] Last seen at on sessions
   - [ ] Expired token vacating cron job
   - [ ] Email verification
   - [ ] Password reset

@@ -21,11 +21,18 @@ pub struct CreateUser;
 #[derive(Debug, Deserialize, Validate, utoipa::ToSchema)]
 #[serde(crate = "serde", rename_all = "camelCase")]
 pub struct Request {
+    #[schema(
+        min_length = 5,
+        max_length = 32,
+        pattern = "^[a-zA-Z0-9]+([_-]?[a-zA-Z0-9])*$"
+    )]
     #[validate(length(min = 5, max = 25), regex(path = "crate::user::USERNAME_REGEX"))]
     pub username: String,
+    /// Must be a valid email string
     #[validate(email)]
     pub email: Option<String>,
-    #[validate(length(min = 8))]
+    #[schema(min_length = 8, max_length = 1024)]
+    #[validate(length(min = 8, max = 1024))]
     pub password: String,
 }
 

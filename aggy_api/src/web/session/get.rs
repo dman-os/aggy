@@ -59,15 +59,22 @@ impl AuthenticatedEndpoint for GetWebSession {
                     Session,
                     r#"
 SELECT
-    id as "id!"
-,   user_id
-,   created_at as "created_at!"
-,   updated_at as "updated_at!"
-,   expires_at as "expires_at!"
+    webs.id as "id!"
+,   webs.created_at as "created_at!"
+,   webs.updated_at as "updated_at!"
+,   webs.expires_at as "expires_at!"
 ,   ip_addr as "ip_addr!: std::net::IpAddr"
 ,   user_agent as "user_agent!"
-FROM web.sessions
-WHERE id = $1
+,   auths.expires_at as "token_expires_at?"
+,   token
+,   user_id
+FROM (
+    web.sessions webs
+        LEFT JOIN
+    auth.sessions auths
+        ON (webs.auth_session_id = auths.id)
+)
+WHERE webs.id = $1
     ;
                 "#,
                     &request.id
@@ -124,12 +131,15 @@ impl DocumentedEndpoint for GetWebSession {
     fn success_examples() -> Vec<serde_json::Value> {
         [Session {
             id: default(),
-            user_id: Some(default()),
             ip_addr: "127.0.0.1".parse().unwrap(),
             user_agent: "Netscape Nav 119.4".to_string(),
             created_at: time::OffsetDateTime::now_utc(),
             updated_at: time::OffsetDateTime::now_utc(),
             expires_at: time::OffsetDateTime::now_utc(),
+
+            user_id: Some(default()),
+            token: Some("joa9wumrilqxu82mdawkl".to_string()),
+            token_expires_at: Some(time::OffsetDateTime::now_utc()),
         }]
         .into_iter()
         .map(serde_json::to_value)

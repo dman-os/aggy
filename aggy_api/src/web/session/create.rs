@@ -11,7 +11,7 @@ pub struct Request {
     #[serde(skip)]
     pub service_secret: Option<BearerToken>,
     pub ip_addr: std::net::IpAddr,
-    pub user_id: Option<Uuid>,
+    pub auth_session_id: Option<Uuid>,
     pub user_agent: String,
 }
 
@@ -23,7 +23,7 @@ pub enum Error {
     #[error("{self:?}")]
     AccessDenied,
     #[error("user not found at id: {id:?}")]
-    UserNotFound { id: Uuid },
+    AuthSessionNotFound { id: Uuid },
     #[error("internal server error: {message:?}")]
     Internal { message: String },
 }
@@ -68,21 +68,32 @@ impl AuthenticatedEndpoint for CreateWebSession {
                 sqlx::query_as!(
                     Session,
                     r#"
-INSERT INTO web.sessions (
-    user_id, ip_addr, user_agent, expires_at
-) VALUES (
-    $1::UUID, $2::TEXT::INET, $3, $4
-) RETURNING 
-    id as "id!"
-,   user_id
-,   created_at as "created_at!"
-,   updated_at as "updated_at!"
-,   expires_at as "expires_at!"
-,   ip_addr as "ip_addr!: std::net::IpAddr"
-,   user_agent as "user_agent!"
-    ;
+WITH webs as (
+    INSERT INTO web.sessions (
+        auth_session_id, ip_addr, user_agent, expires_at
+    ) VALUES (
+        $1::UUID, $2::TEXT::INET, $3, $4
+    ) 
+    RETURNING *
+)
+    SELECT
+        webs.id as "id!"
+    ,   webs.created_at as "created_at!"
+    ,   webs.updated_at as "updated_at!"
+    ,   webs.expires_at as "expires_at!"
+    ,   ip_addr as "ip_addr!: std::net::IpAddr"
+    ,   user_agent as "user_agent!"
+    ,   auths.expires_at as "token_expires_at?"
+    ,   token
+    ,   user_id
+    FROM (
+        webs
+            LEFT JOIN
+        auth.sessions auths
+            ON (webs.auth_session_id = auths.id)
+    )
                 "#,
-                    request.user_id.as_ref(),
+                    request.auth_session_id.as_ref(),
                     &request.ip_addr.to_string(),
                     &request.user_agent,
                     &expires_at,
@@ -92,8 +103,8 @@ INSERT INTO web.sessions (
                 .map_err(|err| match &err {
                     sqlx::Error::Database(boxed) if boxed.constraint().is_some() => {
                         match boxed.constraint().unwrap() {
-                            "sessions_user_id_fkey" => Error::UserNotFound {
-                                id: request.user_id.unwrap(),
+                            "sessions_auth_session_id_fkey" => Error::AuthSessionNotFound {
+                                id: request.auth_session_id.unwrap(),
                             },
                             _ => Error::Internal {
                                 message: format!("db error: {err}"),
@@ -115,7 +126,7 @@ impl From<&Error> for StatusCode {
         use Error::*;
         match err {
             AccessDenied { .. } => Self::UNAUTHORIZED,
-            UserNotFound { .. } => Self::NOT_FOUND,
+            AuthSessionNotFound { .. } => Self::NOT_FOUND,
             Internal { .. } => Self::INTERNAL_SERVER_ERROR,
         }
     }
@@ -149,12 +160,16 @@ impl DocumentedEndpoint for CreateWebSession {
     fn success_examples() -> Vec<serde_json::Value> {
         [Session {
             id: default(),
-            user_id: Some(default()),
+            // user_id: Some(default()),
             ip_addr: "127.0.0.1".parse().unwrap(),
             user_agent: "Netscape Nav 119.4".to_string(),
             created_at: time::OffsetDateTime::now_utc(),
             updated_at: time::OffsetDateTime::now_utc(),
             expires_at: time::OffsetDateTime::now_utc(),
+
+            user_id: Some(default()),
+            token: Some("joa9wumrilqxu82mdawkl".to_string()),
+            token_expires_at: Some(time::OffsetDateTime::now_utc()),
         }]
         .into_iter()
         .map(serde_json::to_value)
@@ -165,7 +180,10 @@ impl DocumentedEndpoint for CreateWebSession {
     fn errors() -> Vec<ErrorResponse<Self::Error>> {
         vec![
             ("Access denied", Error::AccessDenied),
-            ("User Not Found", Error::UserNotFound { id: default() }),
+            (
+                "Auth Session Not Found",
+                Error::AuthSessionNotFound { id: default() },
+            ),
             (
                 "Internal server error",
                 Error::Internal {
@@ -180,8 +198,6 @@ impl DocumentedEndpoint for CreateWebSession {
 mod tests {
     use crate::interlude::*;
 
-    use crate::user::testing::*;
-
     // fn fixture_request() -> Request {
     //     serde_json::from_value(fixture_request_json()).unwrap()
     // }
@@ -190,7 +206,7 @@ mod tests {
         serde_json::json!({
             "ipAddr": "127.0.0.1",
             "userAgent": "Netscape Navigator",
-            "userId": USER_01_ID,
+            "authSessionId": USER_01_SESSION,
         })
     }
 
@@ -230,11 +246,12 @@ mod tests {
             body: fixture_request_json(),
             auth_token: SERVICE_SECRET.into(),
             status: http::StatusCode::CREATED,
-            check_json: fixture_request_json(),
+            check_json: fixture_request_json().remove_keys_from_obj(&["authSessionId"]),
             extra_assertions: &|EAArgs { test_cx, response_json, .. }| {
                 Box::pin(async move {
                     let cx = state_fn_service(test_cx);
-                    let req_body_json = fixture_request_json();
+                    let req_body_json = fixture_request_json()
+                        .remove_keys_from_obj(&["authSessionId"]);
                     let resp_body_json = response_json.unwrap();
 
                     let app = crate::web::router().with_state(cx);
@@ -269,20 +286,20 @@ mod tests {
                 })
             },
         },
-        user_id_is_optional: {
-            body: fixture_request_json().remove_keys_from_obj(&["userId"]),
+        auth_session_id_is_optional: {
+            body: fixture_request_json().remove_keys_from_obj(&["authSessionId"]),
             auth_token: SERVICE_SECRET.into(),
             status: http::StatusCode::CREATED,
-            check_json: fixture_request_json().remove_keys_from_obj(&["userId"]),
+            check_json: fixture_request_json().remove_keys_from_obj(&["authSessionId"]),
         },
-        fails_if_user_not_found: {
+        fails_if_auth_session_not_found: {
             body: fixture_request_json().destructure_into_self(
-                serde_json::json!({ "userId": Uuid::new_v4() })
+                serde_json::json!({ "authSessionId": Uuid::new_v4() })
             ),
             auth_token: SERVICE_SECRET.into(),
             status: http::StatusCode::NOT_FOUND,
             check_json: serde_json::json!({
-                "error": "userNotFound"
+                "error": "authSessionNotFound"
             }),
         },
     }

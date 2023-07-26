@@ -1,4 +1,3 @@
-
 "use server"
 import { redirect } from 'next/navigation';
 import * as zod from "zod";
@@ -7,19 +6,23 @@ import { fromZodError } from "zod-validation-error";
 import {
   T, AggyApiError,
 } from "@/client";
-import { dbg } from "@/utils";
 import { apiClient } from '@/client/index.server';
 
 
-export async function register(data: FormData) {
-  const { client } = apiClient();
+export async function login(data: FormData) {
+  const { client, session } = apiClient();
+  const webSessionId = await session.id();
   try {
-    const { id } = await client.aggy.register({
-      email: data.get("email")!.toString(),
+    const { sessionId: authSessionId } = await client.aggy.authenticate({
+      identifier: data.get("username")!.toString(),
       password: data.get("password")!.toString(),
-      username: data.get("username")!.toString(),
     });
-    dbg({ id });
+    const { } = await client.aggy.updateSession(webSessionId, {
+      authSessionId
+    });
+    // return {
+    //   formError: `Success signing in as ${userId}`,
+    // };
   } catch (err) {
     if (err instanceof zod.ZodError) {
       const zodErr = err as zod.ZodError<T.CreateUserBody>;
@@ -30,14 +33,9 @@ export async function register(data: FormData) {
     }
     if (err instanceof AggyApiError) {
       const aggyErr = err as AggyApiError;
-      if (aggyErr.code === "usernameOccupied") {
+      if (aggyErr.code === "credentialsRejected") {
         return {
-          formError: "Username is already in use",
-        }
-      }
-      if (aggyErr.code === "emailOccupied") {
-        return {
-          formError: "Email is already in use",
+          formError: "Credentials rejected: username or password is wrong",
         }
       }
     }

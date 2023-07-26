@@ -4,7 +4,8 @@ BEGIN;
 DO $body$
     DECLARE
         -- use variables in order to be able to access properties using the dot operator
-        le_user    auth.users;
+        le_user         auth.users;
+        le_auth_sesh    auth.sessions;
     BEGIN
         INSERT INTO auth.users (
             id
@@ -28,17 +29,19 @@ DO $body$
             '$argon2i$v=19$m=4096,t=3,p=1$c29tZXNhbHQ$iWh06vD8Fy27wf9npn6FXWiCX4K6pW6Ue1Bnzz07Z8A'
         );
         INSERT INTO auth.sessions (
-            token, user_id, expires_at
+            id, token, user_id, expires_at
         ) VALUES (
+            '9d827d5c-15bd-413c-9431-39ff96155d7b',
+	    -- FIXME: use some random string
             '9d827d5c-15bd-413c-9431-39ff96155d7b',
             le_user.id,
             CURRENT_TIMESTAMP + interval '7 days'
-        );
+        ) RETURNING * INTO le_auth_sesh;
         INSERT INTO web.sessions (
-            id, user_id, expires_at, ip_addr, user_agent
+            id, auth_session_id, expires_at, ip_addr, user_agent
         ) VALUES (
             '13e4cbdf-aa7c-43ca-990c-a8b468d44616'::uuid,
-            le_user.id,
+            le_auth_sesh.id,
             CURRENT_TIMESTAMP + interval '7 days',
             '127.0.0.1'::inet,
             'ViolaWWW'
@@ -105,6 +108,7 @@ $body$ LANGUAGE PLpgSQL;
 DO $body$
     DECLARE
         le_user    auth.users;
+        le_auth_sesh    auth.sessions;
     BEGIN
         INSERT INTO auth.users (
             id
@@ -128,17 +132,18 @@ DO $body$
             '$argon2i$v=19$m=4096,t=3,p=1$c29tZXNhbHQ$iWh06vD8Fy27wf9npn6FXWiCX4K6pW6Ue1Bnzz07Z8A'
         );
         INSERT INTO auth.sessions (
-            token, user_id, expires_at
+            id, token, user_id, expires_at
         ) VALUES (
+            'ebd3b465-be17-4077-bc4a-add9f76b5028',
             'ebd3b465-be17-4077-bc4a-add9f76b5028',
             le_user.id,
             CURRENT_TIMESTAMP + interval '7 days'
-        );
+        ) RETURNING * INTO le_auth_sesh;
         INSERT INTO web.sessions (
-            id, user_id, expires_at, ip_addr, user_agent
+            id, auth_session_id, expires_at, ip_addr, user_agent
         ) VALUES (
             '0a7f6a02-43a4-4738-b70c-0d66eb24459f'::uuid,
-            le_user.id,
+            le_auth_sesh.id,
             CURRENT_TIMESTAMP + interval '7 days',
             '8.0.0.1'::inet,
             'ViolaWWW'

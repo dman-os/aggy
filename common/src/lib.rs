@@ -10,6 +10,7 @@ pub use axum::http::StatusCode;
 // pub use sqlx;
 pub use validator;
 
+pub mod codecs;
 pub mod macros;
 pub mod utils;
 mod interlude {

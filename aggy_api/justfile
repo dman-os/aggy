@@ -26,6 +26,7 @@ db-reset:
   cargo sqlx database drop -y
   cargo sqlx database create
   @just flyway migrate
+  @just psql-tty < fixtures/000_test_data.sql  
 
 alias dev := dev-up
 

@@ -9,8 +9,8 @@ export class AggyClient {
     public baseUrl: string
   ) { }
 
-  async register(uncleanInput: any) {
-    const input = T.validators.createUserInput.parse(uncleanInput);
+  async register(uncleanInput: T.CreateUserBody) {
+    const input = T.validators.createUserBody.parse(uncleanInput);
     const response = await fetch(
       `${this.baseUrl}/users`,
       {
@@ -27,10 +27,28 @@ export class AggyClient {
     const body = await response.json();
     return zodMustParse(T.validators.user, body);
   }
-  async login() {
+
+  async authenticate(uncleanInput: T.AuthenticateBody) {
+    const input = T.validators.authenticateBody.parse(uncleanInput);
+    const response = await fetch(
+      `${this.baseUrl}/authenticate`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(input)
+      }
+    );
+    if (!response.ok) {
+      throw await AggyApiError.fromResponse(response);
+    }
+    const body = await response.json();
+    return zodMustParse(T.validators.authenticateResponse, body);
   }
-  async createSession(uncleanInput: any) {
-    const input = T.validators.createSessionInput.parse(uncleanInput);
+
+  async createSession(uncleanInput: T.CreateSessionBody) {
+    const input = T.validators.createSessionBody.parse(uncleanInput);
     const response = await fetch(
       `${this.baseUrl}/web/sessions`,
       {
@@ -39,16 +57,55 @@ export class AggyClient {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${this.serviceSecret}`,
         },
-        body: JSON.stringify(input)
+        body: JSON.stringify(input),
       }
     );
     if (!response.ok) {
-      throw dbg(await AggyApiError.fromResponse(response));
+      throw await AggyApiError.fromResponse(response);
+    }
+    const body = await response.json();
+    return zodMustParse(T.validators.session, body);
+  }
+
+  async updateSession(id: string, uncleanInput: T.UpdateSessionBody) {
+    const input = T.validators.updateSessionBody.parse(uncleanInput);
+    const response = await fetch(
+      `${this.baseUrl}/web/sessions/${id}`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${this.serviceSecret}`,
+        },
+        body: JSON.stringify(input),
+      }
+    );
+    if (!response.ok) {
+      throw await AggyApiError.fromResponse(response);
+    }
+    const body = await response.json();
+    return zodMustParse(T.validators.session, body);
+  }
+
+  async getSession(id: string) {
+    const response = await fetch(
+      `${this.baseUrl}/web/sessions/${id}`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${this.serviceSecret}`,
+        },
+      }
+    );
+    if (!response.ok) {
+      throw await AggyApiError.fromResponse(response);
     }
     const body = await response.json();
     return zodMustParse(T.validators.session, body);
   }
 }
+
 export class AggyApiError extends Error {
   constructor(
     public status: number,

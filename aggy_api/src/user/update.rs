@@ -13,13 +13,20 @@ pub struct Request {
     pub auth_token: Option<BearerToken>,
     #[serde(skip)]
     pub user_id: Option<uuid::Uuid>,
+    #[schema(
+        min_length = 5,
+        max_length = 32,
+        pattern = "^[a-zA-Z0-9]+([_-]?[a-zA-Z0-9])*$"
+    )]
     #[validate(length(min = 5, max = 25), regex(path = "crate::user::USERNAME_REGEX"))]
     pub username: Option<String>,
+    /// Must be a valid email string
     #[validate(email)]
     pub email: Option<String>,
     #[validate(url)]
     pub pic_url: Option<String>,
-    #[validate(length(min = 8))]
+    #[schema(min_length = 8, max_length = 1024)]
+    #[validate(length(min = 8, max = 1024))]
     pub password: Option<String>,
 }
 impl Request {
@@ -416,8 +423,17 @@ mod tests {
                     let resp_body_json = response_json.unwrap();
                     tracing::info!(?resp_body_json);
                     assert!(
-                        resp_body_json["updatedAt"].as_i64().unwrap() >
-                        resp_body_json["createdAt"].as_i64().unwrap()
+                        time::OffsetDateTime::parse(
+                            resp_body_json["updatedAt"].as_str().unwrap(),
+                            &Iso8601::DEFAULT
+                        )
+                        .unwrap()
+                        >
+                        time::OffsetDateTime::parse(
+                            resp_body_json["createdAt"].as_str().unwrap(),
+                            &Iso8601::DEFAULT
+                        )
+                        .unwrap()
                     );
                     let app = crate::user::router().with_state(cx);
                     let resp = app

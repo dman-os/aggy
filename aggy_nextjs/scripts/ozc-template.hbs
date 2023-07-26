@@ -1,0 +1,58 @@
+import { z } from "zod";
+
+{{#if types}}
+{{#each types}}
+export {{{this}}}
+{{/each}}
+{{/if}}
+
+{{#each schemas}}
+export const {{@key}}{{#if (lookup ../circularTypeByName @key)}}: z.ZodType<{{@key}}>{{/if}} = {{{this}}};
+{{/each}}
+
+export const endpoints = {
+{{#each endpoints}}
+    {{alias}}: {
+		method: "{{method}}",
+		path: "{{path}}",
+		{{#if description}}
+		description: `{{description}}`,
+		{{/if}}
+		{{#if parameters}}
+		parameters: {
+			{{#each parameters}}
+			"{{name}}": {
+				name: "{{name}}",
+				{{#if description}}
+				description: `{{description}}`,
+				{{/if}}
+				{{#if type}}
+				type: "{{type}}",
+				{{/if}}
+				schema: {{{schema}}}
+			},
+			{{/each}}
+		},
+		{{/if}}
+		response: {{{response}}},
+		{{#if errors.length}}
+		errors: [
+			{{#each errors}}
+			{
+				{{#ifeq status "default" }}
+				status: "default",
+				{{else}}
+				status: {{status}},
+				{{/ifeq}}
+				{{#if description}}
+				description: `{{description}}`,
+				{{/if}}
+				schema: {{{schema}}}
+			},
+			{{/each}}
+		]
+		{{/if}}
+	},
+{{/each}}
+};
+

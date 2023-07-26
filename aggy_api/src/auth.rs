@@ -2,6 +2,7 @@ use crate::interlude::*;
 
 #[derive(Debug)]
 pub struct Session {
+    pub id: uuid::Uuid,
     pub token: String,
     pub user_id: uuid::Uuid,
     pub expires_at: time::OffsetDateTime,

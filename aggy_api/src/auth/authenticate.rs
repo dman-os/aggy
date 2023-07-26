@@ -14,13 +14,13 @@ pub struct Request {
 
 /// `token` currently appears to be a UUID but don't rely one this as this may
 /// change in the future.
-#[derive(Debug, Serialize, utoipa::ToSchema)]
+#[derive(Debug, Deserialize, Serialize, ToSchema, sqlx::FromRow)]
 #[serde(crate = "serde", rename_all = "camelCase")]
 pub struct Response {
+    pub session_id: uuid::Uuid,
     pub user_id: uuid::Uuid,
     pub token: String,
-    #[schema(example = 1234567)]
-    #[serde(with = "time::serde::timestamp")]
+    #[serde(with = "common::codecs::sane_iso8601")]
     pub expires_at: time::OffsetDateTime,
 }
 
@@ -79,34 +79,34 @@ WHERE user_id = (
         let expires_at =
             time::OffsetDateTime::now_utc().saturating_add(cx.config.auth_token_lifespan);
         let token = uuid::Uuid::new_v4().to_string();
-        match &cx.db {
+        let out = match &cx.db {
             crate::Db::Pg { db_pool } => {
-                sqlx::query!(
+                sqlx::query_as!(
+                    Response,
                     r#"
 INSERT INTO auth.sessions (token, user_id, expires_at)
 VALUES (
     $1,
     $2,
     $3
-)
+) RETURNING
+    id AS "session_id!"
+    ,token AS "token!"
+    ,user_id AS "user_id!"
+    ,expires_at AS "expires_at!"
         "#,
                     &token,
                     &user_id,
                     &expires_at
                 )
-                .execute(db_pool)
+                .fetch_one(db_pool)
                 .await
                 .map_err(|err| Error::Internal {
                     message: format!("db error: {err}"),
-                })?;
+                })?
             }
         };
-
-        Ok(Response {
-            user_id,
-            expires_at,
-            token,
-        })
+        Ok(out)
     }
 }
 
@@ -131,7 +131,8 @@ impl DocumentedEndpoint for Authenticate {
 
     fn success_examples() -> Vec<serde_json::Value> {
         [Self::Response {
-            user_id: Default::default(),
+            session_id: default(),
+            user_id: default(),
             token: "mcpqwen8y3489nc8y2pf".into(),
             expires_at: time::OffsetDateTime::now_utc(),
         }]
@@ -198,7 +199,7 @@ mod tests {
             let body = resp.into_body();
             let body = hyper::body::to_bytes(body).await.unwrap_or_log();
             let body: serde_json::Value = serde_json::from_slice(&body).unwrap_or_log();
-            assert!(body["expiresAt"].is_number());
+            assert!(body["expiresAt"].is_string());
             assert!(body["token"].is_string());
             assert_eq!(USER_01_ID.to_string(), body["userId"].as_str().unwrap());
 
@@ -248,7 +249,7 @@ mod tests {
             let body = resp.into_body();
             let body = hyper::body::to_bytes(body).await.unwrap_or_log();
             let body: serde_json::Value = serde_json::from_slice(&body).unwrap_or_log();
-            assert!(body["expiresAt"].is_number());
+            assert!(body["expiresAt"].is_string());
             assert!(body["token"].is_string());
             assert_eq!(USER_01_ID.to_string(), body["userId"].as_str().unwrap());
 
