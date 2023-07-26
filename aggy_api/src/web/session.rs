@@ -1,22 +1,23 @@
 use crate::interlude::*;
 
-#[derive(Debug, serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 #[serde(crate = "serde", rename_all = "camelCase")]
 pub struct Session {
     pub id: uuid::Uuid,
-    pub user_id: Option<uuid::Uuid>,
     pub ip_addr: std::net::IpAddr,
     #[schema(example = "ViolaWWW")]
     pub user_agent: String,
-    #[schema(example = 1234567)]
-    #[serde(with = "time::serde::timestamp")]
+    #[serde(with = "common::codecs::sane_iso8601")]
     pub expires_at: time::OffsetDateTime,
-    #[schema(example = 1234567)]
-    #[serde(with = "time::serde::timestamp")]
+    #[serde(with = "common::codecs::sane_iso8601")]
     pub created_at: time::OffsetDateTime,
-    #[schema(example = 1234567)]
-    #[serde(with = "time::serde::timestamp")]
+    #[serde(with = "common::codecs::sane_iso8601")]
     pub updated_at: time::OffsetDateTime,
+
+    pub user_id: Option<uuid::Uuid>,
+    pub token: Option<String>,
+    #[serde(with = "common::codecs::sane_iso8601::option")]
+    pub token_expires_at: Option<time::OffsetDateTime>,
 }
 
 pub mod create;

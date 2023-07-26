@@ -54,11 +54,12 @@ CREATE TABLE auth.sessions (
     created_at      TIMESTAMPTZ         NOT NULL    DEFAULT CURRENT_TIMESTAMP
 ,   updated_at      TIMESTAMPTZ         NOT NULL    DEFAULT CURRENT_TIMESTAMP
 
+,   id                UUID            NOT NULL      DEFAULT uuid_generate_v7()
 ,   token             TEXT            NOT NULL
 ,   user_id           UUID            NOT NULL
 ,   expires_at        TIMESTAMPTZ     NOT NULL
 
-,   PRIMARY KEY(token)
+,   PRIMARY KEY(id)
 ,   FOREIGN KEY(user_id) REFERENCES auth.users
 );
 

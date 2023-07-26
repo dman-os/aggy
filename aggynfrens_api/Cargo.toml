@@ -13,6 +13,7 @@ common = { workspace = true }
 aggy_api = { workspace = true, default-features = false }
 
 shadow-rs = { workspace = true }
+sqlx = { workspace = true }
 
 [build-dependencies]
 shadow-rs = { workspace = true }

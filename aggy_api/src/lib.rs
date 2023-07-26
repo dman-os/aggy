@@ -11,8 +11,10 @@ mod interlude {
 
     pub use axum::{extract::Path, http, response::IntoResponse, Json, TypedHeader};
     pub use serde::{Deserialize, Serialize};
+    pub use utoipa::ToSchema;
     pub use uuid::Uuid;
     pub use validator::Validate;
+    pub use time::format_description::well_known::Iso8601;
 
     pub use common::utils::default;
     pub use common::{
@@ -117,12 +119,19 @@ Notes:
             })
             .components(Some({
                 let builder = openapi::ComponentsBuilder::new();
-                let builder = builder.schemas_from_iter([
-                    <SortingOrder as utoipa::ToSchema>::schema(),
-                    <common::utils::ValidationErrors as utoipa::ToSchema>::schema(),
-                    <common::utils::ValidationErrorsKind as utoipa::ToSchema>::schema(),
-                    <common::utils::ValidationError as utoipa::ToSchema>::schema(),
-                ]);
+                let builder = builder
+                    .schema(
+                        "std.net.IpAddr",
+                        openapi::ObjectBuilder::new()
+                            .schema_type(openapi::SchemaType::String)
+                            .format(Some(openapi::SchemaFormat::Custom("ipaddr".into()))),
+                    )
+                    .schemas_from_iter([
+                        <SortingOrder as utoipa::ToSchema>::schema(),
+                        <common::utils::ValidationErrors as utoipa::ToSchema>::schema(),
+                        <common::utils::ValidationErrorsKind as utoipa::ToSchema>::schema(),
+                        <common::utils::ValidationError as utoipa::ToSchema>::schema(),
+                    ]);
                 let builder = user::components(builder);
                 let builder = auth::components(builder);
                 let builder = web::components(builder);

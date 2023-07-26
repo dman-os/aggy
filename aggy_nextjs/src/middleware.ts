@@ -1,7 +1,8 @@
 import csrf from 'edge-csrf';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { addSessionMiddleware } from './utils/session';
+
+import { addSessionMiddleware } from '@/utils/session.server';
 
 
 export async function middleware(request: NextRequest) {

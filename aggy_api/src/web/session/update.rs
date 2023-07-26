@@ -12,7 +12,7 @@ pub struct Request {
     pub service_secret: Option<BearerToken>,
     #[serde(skip)]
     pub session_id: Option<uuid::Uuid>,
-    pub user_id: Option<Uuid>,
+    pub auth_session_id: Option<Uuid>,
 }
 
 pub type Response = Ref<Session>;
@@ -24,8 +24,8 @@ pub enum Error {
     AccessDenied,
     #[error("session not found at id: {id:?}")]
     NotFound { id: uuid::Uuid },
-    #[error("user not found at id: {id:?}")]
-    UserNotFound { id: Uuid },
+    #[error("auth session not found at id: {id:?}")]
+    AuthSessionNotFound { id: Uuid },
     #[error("internal server error: {message:?}")]
     Internal { message: String },
 }
@@ -60,49 +60,56 @@ impl AuthenticatedEndpoint for UpdateWebSession {
         request: Self::Request,
     ) -> Result<Self::Response, Self::Error> {
         let out = match &cx.db {
-            crate::Db::Pg { db_pool } => {
-                /* let result = */
-                sqlx::query_as!(
-                    Session,
-                    r#"
-UPDATE web.sessions 
-SET 
-    user_id = COALESCE($2, user_id)
-WHERE id = $1 
-RETURNING
-    id as "id!"
-,   user_id
-,   created_at as "created_at!"
-,   updated_at as "updated_at!"
-,   expires_at as "expires_at!"
-,   ip_addr as "ip_addr!: std::net::IpAddr"
-,   user_agent as "user_agent!"
-    ;
+            crate::Db::Pg { db_pool } => sqlx::query_as!(
+                Session,
+                r#"
+WITH webs as (
+    UPDATE web.sessions 
+    SET 
+        auth_session_id = COALESCE($2, auth_session_id)
+    WHERE id = $1 
+    RETURNING *
+)
+    SELECT
+        webs.id as "id!"
+    ,   webs.created_at as "created_at!"
+    ,   webs.updated_at as "updated_at!"
+    ,   webs.expires_at as "expires_at!"
+    ,   ip_addr as "ip_addr!: std::net::IpAddr"
+    ,   user_agent as "user_agent!"
+    ,   auths.expires_at as "token_expires_at?"
+    ,   token
+    ,   user_id
+    FROM (
+        webs
+            LEFT JOIN
+        auth.sessions auths
+            ON (webs.auth_session_id = auths.id)
+    )
                 "#,
-                    &request.session_id.unwrap(),
-                    request.user_id.as_ref(),
-                )
-                .fetch_one(db_pool)
-                .await
-                .map_err(|err| match &err {
-                    sqlx::Error::RowNotFound => Error::NotFound {
-                        id: request.session_id.unwrap(),
-                    },
-                    sqlx::Error::Database(boxed) if boxed.constraint().is_some() => {
-                        match boxed.constraint().unwrap() {
-                            "sessions_user_id_fkey" => Error::UserNotFound {
-                                id: request.user_id.unwrap(),
-                            },
-                            _ => Error::Internal {
-                                message: format!("db error: {err}"),
-                            },
-                        }
+                &request.session_id.unwrap(),
+                request.auth_session_id.as_ref(),
+            )
+            .fetch_one(db_pool)
+            .await
+            .map_err(|err| match &err {
+                sqlx::Error::RowNotFound => Error::NotFound {
+                    id: request.session_id.unwrap(),
+                },
+                sqlx::Error::Database(boxed) if boxed.constraint().is_some() => {
+                    match boxed.constraint().unwrap() {
+                        "sessions_auth_session_id_fkey" => Error::AuthSessionNotFound {
+                            id: request.auth_session_id.unwrap(),
+                        },
+                        _ => Error::Internal {
+                            message: format!("db error: {err}"),
+                        },
                     }
-                    _ => Error::Internal {
-                        message: format!("db error: {err}"),
-                    },
-                })?
-            }
+                }
+                _ => Error::Internal {
+                    message: format!("db error: {err}"),
+                },
+            })?,
         };
         Ok(out.into())
     }
@@ -113,7 +120,7 @@ impl From<&Error> for StatusCode {
         use Error::*;
         match err {
             AccessDenied { .. } => Self::UNAUTHORIZED,
-            NotFound { .. } | UserNotFound { .. } => Self::NOT_FOUND,
+            NotFound { .. } | AuthSessionNotFound { .. } => Self::NOT_FOUND,
             Internal { .. } => Self::INTERNAL_SERVER_ERROR,
         }
     }
@@ -148,12 +155,15 @@ impl DocumentedEndpoint for UpdateWebSession {
     fn success_examples() -> Vec<serde_json::Value> {
         [Session {
             id: default(),
-            user_id: Some(default()),
             ip_addr: "127.0.0.1".parse().unwrap(),
             user_agent: "Netscape Nav 119.4".to_string(),
             created_at: time::OffsetDateTime::now_utc(),
             updated_at: time::OffsetDateTime::now_utc(),
             expires_at: time::OffsetDateTime::now_utc(),
+
+            user_id: Some(default()),
+            token: Some("joa9wumrilqxu82mdawkl".to_string()),
+            token_expires_at: Some(time::OffsetDateTime::now_utc()),
         }]
         .into_iter()
         .map(serde_json::to_value)
@@ -165,7 +175,10 @@ impl DocumentedEndpoint for UpdateWebSession {
         vec![
             ("Access denied", Error::AccessDenied),
             ("Not Found", Error::NotFound { id: default() }),
-            ("User Not Found", Error::UserNotFound { id: default() }),
+            (
+                "Auth Session Not Found",
+                Error::AuthSessionNotFound { id: default() },
+            ),
             (
                 "Internal server error",
                 Error::Internal {
@@ -180,8 +193,8 @@ impl DocumentedEndpoint for UpdateWebSession {
 mod tests {
     use crate::interlude::*;
 
-    use crate::user::testing::*;
     use crate::web::session::testing::*;
+    use crate::user::testing::*;
 
     // fn fixture_request() -> Request {
     //     serde_json::from_value(fixture_request_json()).unwrap()
@@ -189,7 +202,7 @@ mod tests {
 
     fn fixture_request_json() -> serde_json::Value {
         serde_json::json!({
-            "userId": USER_02_ID,
+            "authSessionId": USER_04_SESSION,
         })
     }
 
@@ -231,11 +244,11 @@ mod tests {
             body: fixture_request_json(),
             auth_token: SERVICE_SECRET.into(),
             status: http::StatusCode::OK,
-            check_json: fixture_request_json(),
+            check_json: serde_json::json!({ "userId": USER_04_ID }),
             extra_assertions: &|EAArgs { test_cx, response_json, .. }| {
                 Box::pin(async move {
                     let cx = state_fn_service(test_cx);
-                    let req_body_json = fixture_request_json();
+                    let req_body_json = serde_json::json!({ "userId": USER_04_ID });
                     let resp_body_json = response_json.unwrap();
 
                     let app = crate::web::router().with_state(cx);
@@ -268,20 +281,22 @@ mod tests {
         },
         fails_if_not_found: {
             uri: format!("/web/sessions/{}", Uuid::new_v4()),
-            body: fixture_request_json().remove_keys_from_obj(&["userId"]),
+            body: fixture_request_json(),
             auth_token: SERVICE_SECRET.into(),
             status: http::StatusCode::NOT_FOUND,
-            check_json: fixture_request_json().remove_keys_from_obj(&["userId"]),
+            check_json: serde_json::json!({
+                "error": "notFound"
+            }),
         },
         fails_if_user_not_found: {
             uri: format!("/web/sessions/{USER_01_WEB_SESSION}"),
             body: fixture_request_json().destructure_into_self(
-                serde_json::json!({ "userId": Uuid::new_v4() })
+                serde_json::json!({ "authSessionId": Uuid::new_v4() })
             ),
             auth_token: SERVICE_SECRET.into(),
             status: http::StatusCode::NOT_FOUND,
             check_json: serde_json::json!({
-                "error": "userNotFound"
+                "error": "authSessionNotFound"
             }),
         },
     }

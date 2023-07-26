@@ -3,6 +3,13 @@ import Link from "next/link"
 
 import './globals.css';
 import '@unocss/reset/tailwind.css';
+import { apiClient } from '@/client/index.server';
+
+import { dbg } from '@/utils';
+import { getCsrfToken } from '@/utils/index.server';
+
+import { logout } from "./actions";
+
 // import { Inter } from 'next/font/google'
 
 // const inter = Inter({ subsets: ['latin'] })
@@ -15,11 +22,16 @@ export const metadata: Metadata = {
   description: 'An experiment.',
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const { client, session } = apiClient();
+  const { userId } = await session.load();
+
+  const csrfToken = getCsrfToken();
+
   return (
     <html lang="en">
       <body className={""/* inter.className */}>
@@ -30,11 +42,32 @@ export default function RootLayout({
             <Link href="/comments">comments</Link>
             <Link href="/submit">submit</Link>
           </nav>
-          <div>
-            <Link href="/login">login</Link>
-            /
-            <Link href="/register">register</Link>
-          </div>
+          {
+            userId ?
+              <div>
+                {userId}
+                |
+                <form
+                  className="inline-block"
+                  action={
+                    logout
+                  }
+                >
+                  <input type="hidden" name="csrf_token" value={csrfToken} />
+                  <button
+                    type="submit"
+                  >
+                    logout
+                  </button>
+                </form>
+              </div>
+              :
+              <div>
+                <Link href="/login">login</Link>
+                /
+                <Link href="/register">register</Link>
+              </div>
+          }
         </header>
         <main>
           {children}

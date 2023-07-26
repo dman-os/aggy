@@ -11,13 +11,13 @@ CREATE TABLE web.sessions (
 ,   updated_at      TIMESTAMPTZ         NOT NULL    DEFAULT CURRENT_TIMESTAMP
 
 ,   id                UUID            NOT NULL      DEFAULT uuid_generate_v7()
-,   user_id           UUID
 ,   expires_at        TIMESTAMPTZ     NOT NULL
+,   auth_session_id   UUID
 ,   ip_addr           INET            NOT NULL
 ,   user_agent        TEXT            NOT NULL
 
 ,   PRIMARY KEY(id)
-,   FOREIGN KEY(user_id) REFERENCES auth.users
+,   FOREIGN KEY(auth_session_id) REFERENCES auth.sessions
 );
 
 CALL util.apply_default_table_config('web', 'sessions');

@@ -2,26 +2,26 @@
 
 import { RadFControl, RadFField, RadFLabel, RadFMessage, RadFRoot, RadFSubmit } from "@/app/_components/radix"
 import { T } from "@/client";
-import { register } from './actions';
+import { login } from './actions';
 import { useState } from 'react';
 
 type DePromisify<T> = T extends Promise<infer Inner> ? Inner : T;
 type ActionErr<A extends (...args: any) => any> = DePromisify<ReturnType<A>> | undefined;
 
-export function RegisterForm({
+export function LoginForm({
   redirectTo,
   csrfToken,
 }: {
   redirectTo: string,
   csrfToken: string,
 }) {
-  const [serverErr, setServerErr] = useState<ActionErr<typeof register>>(undefined);
+  const [serverErr, setServerErr] = useState<ActionErr<typeof login>>(undefined);
 
   return (
     <>
       <RadFRoot asChild>
         <form
-          action={async (formData) => setServerErr(await register(formData))}
+          action={async (formData) => setServerErr(await login(formData))}
           className="flex flex-col gap-2">
           <input type="hidden" name="csrf_token" value={csrfToken} />
           {
@@ -60,26 +60,6 @@ export function RegisterForm({
               </RadFMessage>
             </div>
           </RadFField>
-          { /* <RadFField
-            name="email"
-          >
-            <div
-              className="flex"
-            >
-              <RadFLabel className="w-20%">
-                Email
-              </RadFLabel>
-              <RadFControl type="email" required className="w-full" />
-            </div>
-            <div>
-              <RadFMessage match="valueMissing">
-                Email is missing.
-              </RadFMessage>
-              <RadFMessage match="typeMismatch">
-                Provided email is invalid.
-              </RadFMessage>
-            </div>
-          </RadFField>*/}
           <RadFField
             name="password"
           >
@@ -110,7 +90,7 @@ export function RegisterForm({
             </div>
           </RadFField>
           <RadFSubmit>
-            Register
+            Login
           </RadFSubmit>
         </form>
       </RadFRoot >

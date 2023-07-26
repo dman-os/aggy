@@ -1,6 +1,7 @@
 
-import { AggyClient, ApiClient, T } from "./"
-import { SessionStore, assertNotNull } from '@/utils';
+import { AggyClient, ApiClient, } from "./"
+import { assertNotNull } from '@/utils';
+import { SessionStore } from "@/utils/index.server";
 
 export function apiClient() {
   const aggy = new AggyClient(AGGY_SERVICE_SECRET, AGGY_BASE_URL);

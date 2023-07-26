@@ -6,13 +6,9 @@ use once_cell::sync::Lazy;
 #[serde(crate = "serde", rename_all = "camelCase")]
 pub struct User {
     pub id: uuid::Uuid,
-    /// In seconds since unix epoch in UTC.
-    #[schema(example = 1234567)]
-    #[serde(with = "time::serde::timestamp")]
+    #[serde(with = "common::codecs::sane_iso8601")]
     pub created_at: time::OffsetDateTime,
-    /// In seconds since unix epoch in UTC.
-    #[schema(example = 1234567)]
-    #[serde(with = "time::serde::timestamp")]
+    #[serde(with = "common::codecs::sane_iso8601")]
     pub updated_at: time::OffsetDateTime,
     #[schema(example = "alice@example.com")]
     pub email: Option<String>,

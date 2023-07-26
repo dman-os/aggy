@@ -81,20 +81,22 @@ AS $body$
         INSERT INTO auth.credentials_deleted (row) 
         SELECT row_to_json(d.*)::jsonb FROM deleted AS d;
 
+	UPDATE web.sessions
+	  SET auth_session_id = NULL
+	  WHERE EXISTS (
+	      SELECT 1 
+		FROM auth.sessions 
+		WHERE 
+		    auth.sessions.user_id = target_id 
+		    AND auth.sessions.id = auth_session_id
+	  );
+
         WITH deleted AS (
           DELETE FROM auth.sessions
           WHERE user_id = target_id
           RETURNING *
         )
         INSERT INTO auth.sessions_deleted (row) 
-        SELECT row_to_json(d.*)::jsonb FROM deleted AS d;
-
-        WITH deleted AS (
-          DELETE FROM web.sessions
-          WHERE user_id = target_id
-          RETURNING *
-        )
-        INSERT INTO web.sessions_deleted (row) 
         SELECT row_to_json(d.*)::jsonb FROM deleted AS d;
 
         WITH deleted AS (
