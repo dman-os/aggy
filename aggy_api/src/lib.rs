@@ -11,10 +11,10 @@ mod interlude {
 
     pub use axum::{extract::Path, http, response::IntoResponse, Json, TypedHeader};
     pub use serde::{Deserialize, Serialize};
+    pub use time::format_description::well_known::Iso8601;
     pub use utoipa::ToSchema;
     pub use uuid::Uuid;
     pub use validator::Validate;
-    pub use time::format_description::well_known::Iso8601;
 
     pub use common::utils::default;
     pub use common::{
@@ -102,9 +102,6 @@ impl utoipa::OpenApi for ApiDoc {
                     // .version(build::PKG_VERSION)
                     .description(Some(format!(
                         r#"{}
-
-Notes:
-- Time values are integers despite the `string($date-time)` type shown here.
                         "#,
                         "aggy is an experiment"
                     )))

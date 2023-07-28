@@ -27,28 +27,27 @@ pub fn paths(
     builder: utoipa::openapi::PathsBuilder,
     prefix_path: &str,
 ) -> utoipa::openapi::PathsBuilder {
-    builder
-        .path(
-            format!(
-                "{prefix_path}{}",
-                common::axum_path_str_to_openapi(session::get::GetWebSession::PATH)
-            ),
+    [
+        (
+            session::get::GetWebSession::PATH,
             session::get::GetWebSession::path_item(),
-        )
-        .path(
-            format!(
-                "{prefix_path}{}",
-                common::axum_path_str_to_openapi(session::create::CreateWebSession::PATH)
-            ),
+        ),
+        (
+            session::create::CreateWebSession::PATH,
             session::create::CreateWebSession::path_item(),
-        )
-        .path(
-            format!(
-                "{prefix_path}{}",
-                common::axum_path_str_to_openapi(session::update::UpdateWebSession::PATH)
-            ),
+        ),
+        (
+            session::update::UpdateWebSession::PATH,
             session::update::UpdateWebSession::path_item(),
+        ),
+    ]
+    .into_iter()
+    .fold(builder, |builder, (path, item)| {
+        builder.path(
+            format!("{prefix_path}{}", common::axum_path_str_to_openapi(path)),
+            item,
         )
+    })
 }
 
 pub mod testing {

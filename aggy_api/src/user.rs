@@ -2,7 +2,7 @@ use crate::interlude::*;
 
 use once_cell::sync::Lazy;
 
-#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema, sqlx::FromRow)]
 #[serde(crate = "serde", rename_all = "camelCase")]
 pub struct User {
     pub id: uuid::Uuid,
@@ -64,43 +64,20 @@ pub fn paths(
     builder: utoipa::openapi::PathsBuilder,
     prefix_path: &str,
 ) -> utoipa::openapi::PathsBuilder {
-    use common::axum_path_str_to_openapi;
-    builder
-        .path(
-            format!(
-                "{prefix_path}{}",
-                axum_path_str_to_openapi(get::GetUser::PATH)
-            ),
-            get::GetUser::path_item(),
+    [
+        (get::GetUser::PATH, get::GetUser::path_item()),
+        (create::CreateUser::PATH, create::CreateUser::path_item()),
+        (update::UpdateUser::PATH, update::UpdateUser::path_item()),
+        (delete::DeleteUser::PATH, delete::DeleteUser::path_item()),
+        (list::ListUsers::PATH, list::ListUsers::path_item()),
+    ]
+    .into_iter()
+    .fold(builder, |builder, (path, item)| {
+        builder.path(
+            format!("{prefix_path}{}", common::axum_path_str_to_openapi(path)),
+            item,
         )
-        .path(
-            format!(
-                "{prefix_path}{}",
-                axum_path_str_to_openapi(update::UpdateUser::PATH)
-            ),
-            update::UpdateUser::path_item(),
-        )
-        .path(
-            format!(
-                "{prefix_path}{}",
-                axum_path_str_to_openapi(delete::DeleteUser::PATH)
-            ),
-            delete::DeleteUser::path_item(),
-        )
-        .path(
-            format!(
-                "{prefix_path}{}",
-                axum_path_str_to_openapi(create::CreateUser::PATH)
-            ),
-            create::CreateUser::path_item(),
-        )
-        .path(
-            format!(
-                "{prefix_path}{}",
-                axum_path_str_to_openapi(list::ListUsers::PATH)
-            ),
-            list::ListUsers::path_item(),
-        )
+    })
 }
 
 // #[cfg(test)]

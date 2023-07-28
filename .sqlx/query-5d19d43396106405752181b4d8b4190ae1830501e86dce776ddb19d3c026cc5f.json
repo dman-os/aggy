@@ -15,16 +15,21 @@
       },
       {
         "ordinal": 2,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
         "name": "token",
         "type_info": "Text"
       },
       {
-        "ordinal": 3,
+        "ordinal": 4,
         "name": "user_id",
         "type_info": "Uuid"
       },
       {
-        "ordinal": 4,
+        "ordinal": 5,
         "name": "expires_at",
         "type_info": "Timestamptz"
       }
@@ -35,6 +40,7 @@
       ]
     },
     "nullable": [
+      false,
       false,
       false,
       false,

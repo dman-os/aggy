@@ -1,0 +1,62 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    id as \"id!\"\n    ,created_at as \"created_at!\"\n    ,updated_at as \"updated_at!\"\n    ,email::TEXT as \"email?\"\n    ,username::TEXT as \"username!\"\n    ,'f' || encode(pub_key, 'hex') as \"pub_key!\"\n    ,pic_url\nFROM auth.create_user($1, $2, $3, $4, $5)\n                ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id!",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "created_at!",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 2,
+        "name": "updated_at!",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 3,
+        "name": "email?",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "username!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "pub_key!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "pic_url",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text",
+        "Bytea",
+        "Bytea"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "a995ef957eee28c6f21a80a11ae14cf0338aeb48dc5bbe077a5dfe7c761e808b"
+}

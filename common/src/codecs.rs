@@ -1,13 +1,16 @@
-
-
 // crate::time::serde::format_description!(sane_iso8601, OffsetDateTime, FORMAT);
 pub mod sane_iso8601 {
     use crate::interlude::*;
-    use time::format_description::well_known::{iso8601::{self, TimePrecision}, Iso8601 };
+    use time::format_description::well_known::{
+        iso8601::{self, TimePrecision},
+        Iso8601,
+    };
 
     const CONFIG: iso8601::EncodedConfig = iso8601::Config::DEFAULT
         .set_year_is_six_digits(false)
-        .set_time_precision(TimePrecision::Second{ decimal_digits: None })
+        .set_time_precision(TimePrecision::Second {
+            decimal_digits: None,
+        })
         .encode();
     const FORMAT: Iso8601<CONFIG> = Iso8601::<CONFIG>;
 
