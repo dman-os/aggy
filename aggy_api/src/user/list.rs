@@ -152,9 +152,9 @@ SELECT
     id
     ,created_at
     ,updated_at
-    ,email::TEXT as "email?"
-    ,username::TEXT as "username!"
-    ,'f' || encode(pub_key, 'hex') as "pub_key!"
+    ,email::TEXT as "email"
+    ,username::TEXT as "username"
+    ,'f' || encode(pub_key, 'hex') as "pub_key"
     ,pic_url
 FROM (
     SELECT *
@@ -185,16 +185,8 @@ LIMIT $2 + 1
                     .into_iter()
                     .take(limit as _)
                     .map(|row| {
-                        use sqlx::Row;
-                        Ok::<_, sqlx::Error>(User {
-                            id: row.try_get("id")?,
-                            created_at: row.try_get("created_at")?,
-                            updated_at: row.try_get("updated_at")?,
-                            username: row.try_get("username!")?,
-                            email: row.try_get("email?")?,
-                            pic_url: row.try_get("pic_url")?,
-                            pub_key: row.try_get("pub_key!")?,
-                        })
+                        use sqlx::FromRow;
+                        User::from_row(&row)
                     })
                     .collect::<Result<Vec<_>, _>>()
                     .map_err(|err| Error::Internal {

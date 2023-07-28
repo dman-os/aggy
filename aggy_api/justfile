@@ -15,7 +15,7 @@ psql-tty *ARGS:
 
 # The flyway cli tool
 flyway *ARGS:
-  podman-compose  --profile tools run --rm flyway {{ARGS}}
+  podman-compose -f ./docker-compose.yml -f ../docker-compose.tools.yml --profile tools run --rm flyway {{ARGS}}
 
 # Apply migrations to database.
 db-mig:
@@ -33,6 +33,9 @@ alias dev := dev-up
 # Start all services required for development
 dev-up:
   podman-compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+
+dev-down *ARGS:
+  podman-compose -f docker-compose.yml -f docker-compose.dev.yml down {{ARGS}}
 
 test *ARGS:
   cargo nextest run {{ARGS}}

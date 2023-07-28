@@ -347,6 +347,26 @@ pub trait DocumentedParameter {
 //     }
 // }
 
+impl DocumentedParameter for axum::extract::Path<String> {
+    fn to_openapi(_op_id: &str, path: &str) -> Vec<ParameterDoc> {
+        axum_path_parameter_list(path)
+            .into_iter()
+            .map(|name| {
+                openapi::path::ParameterBuilder::new()
+                    .name(name)
+                    .parameter_in(openapi::path::ParameterIn::Path)
+                    .required(openapi::Required::True)
+                    .schema(Some(
+                        openapi::schema::ObjectBuilder::new()
+                            .schema_type(openapi::SchemaType::String),
+                    ))
+                    .build()
+                    .into()
+            })
+            .collect()
+    }
+}
+
 impl DocumentedParameter for axum::extract::Path<uuid::Uuid> {
     fn to_openapi(_op_id: &str, path: &str) -> Vec<ParameterDoc> {
         axum_path_parameter_list(path)

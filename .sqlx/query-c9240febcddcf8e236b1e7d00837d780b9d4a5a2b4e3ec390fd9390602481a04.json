@@ -1,0 +1,58 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT \n    id\n    ,created_at\n    ,updated_at\n    ,email::TEXT as \"email?\"\n    ,username::TEXT as \"username!\"\n    ,'f' || encode(pub_key, 'hex') as \"pub_key!\"\n    ,pic_url\nFROM auth.users\nWHERE id = $1::uuid\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 2,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 3,
+        "name": "email?",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "username!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "pub_key!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "pic_url",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      null,
+      null,
+      null,
+      true
+    ]
+  },
+  "hash": "c9240febcddcf8e236b1e7d00837d780b9d4a5a2b4e3ec390fd9390602481a04"
+}

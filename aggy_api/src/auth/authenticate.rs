@@ -80,10 +80,9 @@ WHERE user_id = (
             time::OffsetDateTime::now_utc().saturating_add(cx.config.auth_token_lifespan);
         let token = uuid::Uuid::new_v4().to_string();
         let out = match &cx.db {
-            crate::Db::Pg { db_pool } => {
-                sqlx::query_as!(
-                    Response,
-                    r#"
+            crate::Db::Pg { db_pool } => sqlx::query_as!(
+                Response,
+                r#"
 INSERT INTO auth.sessions (token, user_id, expires_at)
 VALUES (
     $1,
@@ -95,16 +94,15 @@ VALUES (
     ,user_id AS "user_id!"
     ,expires_at AS "expires_at!"
         "#,
-                    &token,
-                    &user_id,
-                    &expires_at
-                )
-                .fetch_one(db_pool)
-                .await
-                .map_err(|err| Error::Internal {
-                    message: format!("db error: {err}"),
-                })?
-            }
+                &token,
+                &user_id,
+                &expires_at
+            )
+            .fetch_one(db_pool)
+            .await
+            .map_err(|err| Error::Internal {
+                message: format!("db error: {err}"),
+            })?,
         };
         Ok(out)
     }

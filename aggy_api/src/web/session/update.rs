@@ -193,8 +193,8 @@ impl DocumentedEndpoint for UpdateWebSession {
 mod tests {
     use crate::interlude::*;
 
-    use crate::web::session::testing::*;
     use crate::user::testing::*;
+    use crate::web::session::testing::*;
 
     // fn fixture_request() -> Request {
     //     serde_json::from_value(fixture_request_json()).unwrap()

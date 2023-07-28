@@ -4,6 +4,8 @@ use aggy_api::*;
 
 shadow_rs::shadow!(build);
 
+mod playground;
+
 fn main() {
     dotenvy::dotenv().ok();
     common::setup_tracing().unwrap();
