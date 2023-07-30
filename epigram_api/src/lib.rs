@@ -12,6 +12,7 @@ mod interlude {
     pub use axum::{extract::Path, http, response::IntoResponse, Json, TypedHeader};
     pub use serde::{Deserialize, Serialize};
     pub use time::format_description::well_known::Iso8601;
+    pub use time::OffsetDateTime;
     pub use utoipa::ToSchema;
     pub use uuid::Uuid;
     pub use validator::Validate;
@@ -138,5 +139,168 @@ impl utoipa::OpenApi for ApiDoc {
             )
         }
         openapi
+    }
+}
+
+#[test]
+#[ignore]
+fn playground() {
+    use ed25519_dalek::Signer;
+    use gram::*;
+    use sha2::Digest;
+
+    struct Seed {
+        content: String,
+        keypair: ed25519_dalek::SigningKey,
+        alias: String,
+        children: Option<Vec<Seed>>,
+    }
+    struct Author {
+        keypair: ed25519_dalek::SigningKey,
+        alias: String,
+    }
+    fn seed_to_gram(seed: Seed, parent_id: Option<String>) -> Gram {
+        let created_at = OffsetDateTime::now_utc();
+        let mime = "text/html".to_string();
+        let author_pubkey = hex::encode(seed.keypair.verifying_key().to_bytes());
+        let json = serde_json::to_string(&serde_json::json!([
+            0,
+            author_pubkey,
+            created_at.unix_timestamp(),
+            seed.content,
+            mime,
+            parent_id
+        ]))
+        .unwrap();
+        let id = {
+            let mut hasher = sha2::Sha256::new();
+            hasher.update(&dbg!(json)[..]);
+            hasher.finalize()
+        };
+        let sig = hex::encode(seed.keypair.sign(&id[..]).to_bytes());
+        let id = hex::encode(&id[..]);
+        Gram {
+            id,
+            created_at,
+            content: seed.content.to_string(),
+            mime,
+            parent_id,
+            author_pubkey,
+            author_alias: Some(seed.alias),
+            sig,
+        }
+    }
+    fn seeds_to_gram(out: &mut Vec<Gram>, parent_id: Option<String>, seeds: Vec<Seed>) {
+        for mut seed in seeds.into_iter() {
+            let children = seed.children.take();
+            let gram = seed_to_gram(seed, parent_id.clone());
+            let parent_id = gram.id.clone();
+            out.push(gram);
+            if let Some(children) = children {
+                seeds_to_gram(out, Some(parent_id), children);
+            }
+        }
+    }
+    let mut out = vec![];
+
+    let authors = [
+        Author {
+            keypair: ed25519_dalek::SigningKey::generate(&mut rand::thread_rng()),
+            alias: "use1".to_string(),
+        },
+        Author {
+            keypair: ed25519_dalek::SigningKey::generate(&mut rand::thread_rng()),
+            alias: "fideroth".to_string(),
+        },
+        Author {
+            keypair: ed25519_dalek::SigningKey::generate(&mut rand::thread_rng()),
+            alias: "the_i18n_man".to_string(),
+        },
+        Author {
+            keypair: ed25519_dalek::SigningKey::generate(&mut rand::thread_rng()),
+            alias: "wgt".to_string(),
+        },
+        Author {
+            keypair: ed25519_dalek::SigningKey::generate(&mut rand::thread_rng()),
+            alias: "ftw".to_string(),
+        },
+    ];
+    seeds_to_gram(
+        &mut out,
+        None,
+        vec![Seed {
+            content: "I wan't you to know, I wan't you to know that I'm awake.".to_string(),
+            keypair: authors[0].keypair.clone(),
+            alias: authors[0].alias.clone(),
+            children: Some(vec![
+                Seed {
+                    content: "And I hope you're asleep.".to_string(),
+                    keypair: authors[1].keypair.clone(),
+                    alias: authors[1].alias.clone(),
+                    children: Some(vec![Seed {
+                        content: "*air guitars madly*".to_string(),
+                        keypair: authors[0].keypair.clone(),
+                        alias: authors[0].alias.clone(),
+                        children: Some(vec![Seed {
+                            content: "*sads doggly*".to_string(),
+                            keypair: authors[1].keypair.clone(),
+                            alias: authors[1].alias.clone(),
+                            children: None,
+                        }]),
+                    }]),
+                },
+                Seed {
+                    content: "What gives?".to_string(),
+                    keypair: authors[2].keypair.clone(),
+                    alias: authors[2].alias.clone(),
+                    children: Some(vec![Seed {
+                        content: "What doesn't?".to_string(),
+                        keypair: authors[3].keypair.clone(),
+                        alias: authors[3].alias.clone(),
+                        children: None,
+                    }]),
+                },
+                Seed {
+                    content: "Stop redditing!!!".to_string(),
+                    keypair: authors[4].keypair.clone(),
+                    alias: authors[4].alias.clone(),
+                    children: None,
+                },
+            ]),
+        }],
+    );
+
+    println!("{}", serde_json::to_string_pretty(&out).unwrap());
+    for Gram {
+        id,
+        content,
+        mime,
+        parent_id,
+        sig,
+        author_pubkey,
+        author_alias,
+        ..
+    } in out
+    {
+        println!(
+            r#"
+        ,(
+            '\x{id}'::bytea
+            ,$${content}$$
+            ,'{mime}'
+            ,{}
+            ,'\x{sig}'::bytea
+            ,'\x{author_pubkey}'::bytea
+            ,'{}'
+            ,'{}'
+        )"#,
+            if let Some(id) = parent_id {
+                format!("'\\x{id}'::bytea")
+            } else {
+                "NULL".to_string()
+            },
+            author_alias.as_ref().unwrap(),
+            format!("{}@aggy.news", author_alias.as_ref().unwrap()),
+        )
     }
 }

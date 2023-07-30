@@ -1,0 +1,41 @@
+set shell := ["sh", "-c"]
+set dotenv-load
+
+# List the avail commands
+default:
+  @just --list --unsorted
+
+# psql from the db running in the compose launched pg container
+psql:
+  podman-compose -f ./docker-compose.yml -f ./docker-compose.dev.yml exec postgres psql -U epigram
+
+# psql command but fit for redirects
+psql-tty *ARGS:
+  podman-compose  -f ./docker-compose.yml -f ./docker-compose.dev.yml exec -T postgres psql -U epigram {{ARGS}}
+
+# The flyway cli tool
+flyway *ARGS:
+  podman-compose -f ./docker-compose.yml -f ../docker-compose.tools.yml --profile tools run --rm flyway {{ARGS}}
+
+# Apply migrations to database.
+db-mig:
+  @just flyway migrate
+
+# Apply migrations to database.
+db-reset:
+  cargo sqlx database drop -y
+  cargo sqlx database create
+  @just flyway migrate
+  @just psql-tty < fixtures/000_test_data.sql  
+
+alias dev := dev-up
+
+# Start all services required for development
+dev-up:
+  podman-compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+
+dev-down *ARGS:
+  podman-compose -f docker-compose.yml -f docker-compose.dev.yml down {{ARGS}}
+
+test *ARGS:
+  cargo nextest run {{ARGS}}
