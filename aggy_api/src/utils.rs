@@ -3,10 +3,6 @@ use crate::interlude::*;
 pub use list_request::*;
 mod list_request;
 
-pub fn encode_hex_multibase<T: AsRef<[u8]>>(source: T) -> String {
-    format!("f{}", hex::encode(source))
-}
-
 #[cfg(test)]
 pub mod testing {
 

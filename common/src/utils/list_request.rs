@@ -45,17 +45,20 @@ where
     T: Serialize,
 {
     pub fn to_encoded_str(&self) -> String {
-        use std::io::Write;
+        use std::fmt::Write;
         // let mut out = format!("{CURSOR_VERSION}:");
-        let mut out = Vec::new();
+        let mut out = String::new();
         {
             std::write!(&mut out, "{CURSOR_VERSION}:").unwrap_or_log();
-            let mut b64_w =
-                base64::write::EncoderWriter::new(&mut out, &base64::prelude::BASE64_URL_SAFE);
-            let mut brotli_w = brotli::CompressorWriter::new(&mut b64_w, 4096, 5, 21);
-            serde_json::to_writer(&mut brotli_w, &self).unwrap_or_log();
+            let mut compressed = Vec::new();
+            // let mut b64_w = base64::write::EncoderWriter::new(&mut out, &base64::prelude::BASE64_URL_SAFE);
+            {
+                let mut brotli_w = brotli::CompressorWriter::new(&mut compressed, 4096, 5, 21);
+                serde_json::to_writer(&mut brotli_w, &self).unwrap_or_log();
+            }
+            data_encoding::BASE64URL.encode_append(&compressed, &mut out);
         }
-        String::from_utf8(out).unwrap_or_log()
+        out
     }
 }
 
@@ -67,18 +70,13 @@ where
     type Err = ();
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        use base64::Engine;
         let (ver_str, payload_str) = s.split_once(':').ok_or(())?;
         let version: usize = ver_str.parse().map_err(|_| ())?;
         if version != CURSOR_VERSION {
             return Err(());
         }
-        // let mut cursor = std::io::Cursor::new(payload_str);
-        // let mut b64_r = base64::read::DecoderReader::new(&mut cursor, base64::STANDARD);
-        // let mut brotil_r = brotli::CompressorReader::new(&mut b64_r, 4096, 5, 21);
-        // serde_json::from_reader(&mut brotil_r).map_err(|err| tracing::error!(?err))
-        let compressed = base64::prelude::BASE64_URL_SAFE
-            .decode(payload_str)
+        let compressed = data_encoding::BASE64URL
+            .decode(payload_str.as_bytes())
             .map_err(|_| ())?;
         let mut cursor = std::io::Cursor::new(&compressed);
         let mut json = Vec::new();

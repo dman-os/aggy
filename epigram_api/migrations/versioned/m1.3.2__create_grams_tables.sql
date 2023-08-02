@@ -20,12 +20,14 @@ CREATE TABLE grams.grams (
 ,   author_alias            TEXT
 ,   author_notif_email      extensions.CITEXT
 
-    -- all constraints (besides not null) go after the columns
 ,   PRIMARY KEY(id)
+,   FOREIGN KEY(parent_id) REFERENCES grams.grams
 -- ,   UNIQUE(email)
 );
 
-CALL util.apply_default_table_config('grams', 'grams');
+-- CREATE INDEX ON
+--   grams.grams(parent_id);
+-- CALL util.apply_default_table_config('grams', 'grams');
 
 CALL util.create_deleted_rows_table('grams', 'grams');
 

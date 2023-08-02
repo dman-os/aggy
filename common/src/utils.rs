@@ -8,6 +8,26 @@ pub mod testing;
 mod list_request;
 pub use list_request::*;
 
+pub fn encode_hex_multibase<T: AsRef<[u8]>>(source: T) -> String {
+    format!(
+        "f{}",
+        data_encoding::HEXLOWER_PERMISSIVE.encode(source.as_ref())
+    )
+}
+
+pub fn decode_hex_multibase(source: &str) -> eyre::Result<Vec<u8>> {
+    match (
+        &source[0..1],
+        data_encoding::HEXLOWER_PERMISSIVE.decode(source[1..].as_bytes()),
+    ) {
+        ("f", Ok(bytes)) => Ok(bytes),
+        (prefix, Ok(_)) => Err(eyre::eyre!(
+            "unexpected multibase prefix for hex multibase: {prefix}"
+        )),
+        (_, Err(err)) => Err(eyre::eyre!("error decoding hex: {err}")),
+    }
+}
+
 /// This baby doesn't work on generic types
 pub fn type_name_raw<T>() -> &'static str {
     let name = std::any::type_name::<T>();

@@ -16,6 +16,7 @@ pub struct Gram {
     pub sig: String,
 }
 
+mod create;
 mod get;
 
 pub const TAG: common::Tag = common::Tag {
@@ -24,13 +25,16 @@ pub const TAG: common::Tag = common::Tag {
 };
 
 pub fn router() -> axum::Router<SharedContext> {
-    axum::Router::new().merge(EndpointWrapper::new(get::GetGram))
+    axum::Router::new()
+        .merge(EndpointWrapper::new(get::GetGram))
+        .merge(EndpointWrapper::new(create::CreateGram))
 }
 
 pub fn components(
     builder: utoipa::openapi::ComponentsBuilder,
 ) -> utoipa::openapi::ComponentsBuilder {
     let builder = get::GetGram::components(builder);
+    let builder = create::CreateGram::components(builder);
 
     builder.schemas_from_iter([<Gram as ToSchema>::schema()])
 }
@@ -39,14 +43,17 @@ pub fn paths(
     builder: utoipa::openapi::PathsBuilder,
     prefix_path: &str,
 ) -> utoipa::openapi::PathsBuilder {
-    [(get::GetGram::PATH, get::GetGram::path_item())]
-        .into_iter()
-        .fold(builder, |builder, (path, item)| {
-            builder.path(
-                format!("{prefix_path}{}", common::axum_path_str_to_openapi(path)),
-                item,
-            )
-        })
+    [
+        (get::GetGram::PATH, get::GetGram::path_item()),
+        (create::CreateGram::PATH, create::CreateGram::path_item()),
+    ]
+    .into_iter()
+    .fold(builder, |builder, (path, item)| {
+        builder.path(
+            format!("{prefix_path}{}", common::axum_path_str_to_openapi(path)),
+            item,
+        )
+    })
 }
 
 pub mod testing {
@@ -54,13 +61,13 @@ pub mod testing {
     use once_cell::sync::Lazy;
 
     pub const GRAM_01_ID: &'static str =
-        "f4776309475fa7460e046126bd8d9453a88cb4548bd35e5f7cfafbf9a0ecb64d5";
+        "f26204069c8e8525502946fa9e7b9f51a1a3a9fb3bbd1263bf6fdc39af8572d61";
     pub const GRAM_02_ID: &'static str =
-        "fe20b19235696d1469fd00f44a73de9111f0983227682284fa7526b66c19cded7";
+        "f863a254a782fae5bcde8629a01a5591a89d1e6bfc531ce5ae4443e149dc29d77";
     pub const GRAM_03_ID: &'static str =
-        "f2d7ebd96468b0e889887251864c337a8ee042200cd92d93fa77ec6de44049fc0";
+        "fa3bf486c93ed2e6d5d61ecff467670eee74c85942441ddd9422d1139b8044c5b";
     pub const GRAM_04_ID: &'static str =
-        "fcc212c4940c8e5872f67493f14c7817bf0e144d34b13d798a116cd606b58c616";
+        "f8e007922fb38461df02aae6409276ba8f9eb39c64066c585ffccb0023146cd79";
 
     pub static GRAM_01: Lazy<Gram> = Lazy::new(|| {
         Gram{
@@ -69,9 +76,9 @@ pub mod testing {
         content: "I wan't you to know, I wan't you to know that I'm awake.".into(),
         mime: "text/html".into(),
         parent_id: None,
-        author_pubkey: "fc993d470f9e138ad4c94bb897e2733f6314e38e9dcb58e661d224234b55c7b98".into(),
+        author_pubkey: "f691d917d665d04bb35b65ff896478b9dd59af81ade6c6d7a98d9c19666147c87".into(),
         author_alias: Some("use1".into()),
-        sig: "f4574a3daaffb3a29704ee1c9937217a4a72f96afc8c4f6e9de5ea7bab85b0b6fa05c692efb380ea92e9fc6058cd683b105bc9245222cb8bef2572dbad6075d09".into(),
+        sig: "fcc048f2de1d7b3bf0608a3b89a1a71e4f8c8db4049980dca31efe48271ebaabb0572a62bd0346348f5ae09d0b1fd7a530ecab974fc6e474fac46b03127f19802".into(),
     }
     });
     pub static GRAM_02: Lazy<Gram> = Lazy::new(|| {
@@ -80,10 +87,10 @@ pub mod testing {
         created_at: OffsetDateTime::now_utc(),
         content: "And I hope you're asleep.".into(),
         mime: "text/html".into(),
-        parent_id: Some("f4776309475fa7460e046126bd8d9453a88cb4548bd35e5f7cfafbf9a0ecb64d5".into()),
-        author_pubkey: "f108a880634a69715e6d5ccb79888530fe2a204037e5d917d9f750576a084d1a3".into(),
+        parent_id: Some(GRAM_01_ID.into()),
+        author_pubkey: "fd093f5a4cbc24177a52b4c7b3050c2380f0da88162b84c30f8ff44bbe4e86c77".into(),
         author_alias: Some("fideroth".into()),
-        sig: "fddf5cf0fc11586706931a2ed25cd5dace45db6a9257fbc8f242cd0e98433c6854961107c01fc788b7db5ce0f97944b333e874a643cc130b6723dc29779571f0f".into(),
+        sig: "f6223912f4339bf83829467a32a67cb5e87988f710b65202f86fbb43fbf194f941895e2f5578f205254132ed1d7b1ae8ce712057f19eccccdeb4c20a871fb3e0e".into(),
     }
     });
     pub static GRAM_03: Lazy<Gram> = Lazy::new(|| {
@@ -92,10 +99,10 @@ pub mod testing {
         created_at: OffsetDateTime::now_utc(),
         content: "*air guitars madly*".into(),
         mime: "text/html".into(),
-        parent_id: Some("fe20b19235696d1469fd00f44a73de9111f0983227682284fa7526b66c19cded7".into()),
-        author_pubkey: "fc993d470f9e138ad4c94bb897e2733f6314e38e9dcb58e661d224234b55c7b98".into(),
+        parent_id: Some(GRAM_02_ID.into()),
+        author_pubkey: "f691d917d665d04bb35b65ff896478b9dd59af81ade6c6d7a98d9c19666147c87".into(),
         author_alias: Some("use1".into()),
-        sig: "f42929747078a1e4e5301a7dc8b1092ee8fa091770282d9ddfe3d55051e5a9cee32d2d8a94f4980ccbacee36044fb4be4875def17ae5386653423874e8a9ea208".into(),
+        sig: "f8f2f73e71d7fc723e4bf0ccafec7ab6726ac0d9c61c6d3d3f4d64419e1a1109fa1502afd8f578100b33e31221fc8cce19ee526f4b6da6424feb6ebd0ccc7be00".into(),
     }
     });
     pub static GRAM_04: Lazy<Gram> = Lazy::new(|| {
@@ -104,10 +111,10 @@ pub mod testing {
         created_at: OffsetDateTime::now_utc(),
         content: "*sads doggly*".into(),
         mime: "text/html".into(),
-        parent_id: Some("f2d7ebd96468b0e889887251864c337a8ee042200cd92d93fa77ec6de44049fc0".into()),
-        author_pubkey: "f108a880634a69715e6d5ccb79888530fe2a204037e5d917d9f750576a084d1a3".into(),
+        parent_id: Some(GRAM_03_ID.into()),
+        author_pubkey: "fd093f5a4cbc24177a52b4c7b3050c2380f0da88162b84c30f8ff44bbe4e86c77".into(),
         author_alias: Some("fideroth".into()),
-        sig: "fc7378d3ee55f7aab0cd284d3a718a62ab20829d08ea0589a12cbfcf6321b5b010bc3f761fbe33ac420cf7a4b69b6dfb39aa64fddf27c5abf273873f007a4b80a".into(),
+        sig: "f24f497b3bd42f676538fe974cc7e233c74605880b033ec7964db1734eb1aea9d7c530ee9c41376e5cad4c530bf3bb34ef75f9a2a0044ec0d2dd838e1611b2f00".into(),
     }
     });
 }

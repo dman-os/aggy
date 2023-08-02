@@ -37,12 +37,10 @@ impl Endpoint for GetGram {
         cx: &Self::Cx,
         request: Self::Request,
     ) -> Result<Self::Response, Self::Error> {
-        let id_byte = match (&request.id[0..1], hex::decode(&request.id[1..])) {
-            ("f", Ok(id_byte)) => id_byte,
-            _ => {
-                return Err(Error::NotFound { id: request.id })
-            }
-        };
+        let id_byte =
+            common::utils::decode_hex_multibase(&request.id).map_err(|_| Error::NotFound {
+                id: request.id.clone(),
+            })?;
 
         match &cx.db {
             crate::Db::Pg { db_pool } => sqlx::query_as!(
@@ -99,7 +97,9 @@ impl HttpEndpoint for GetGram {
     fn request(
         (/*TypedHeader(auth_token), */ Path(id), _): Self::HttpRequest,
     ) -> Result<Self::Request, Self::Error> {
-        Ok(Request { /*auth_token, */ id })
+        Ok(Request {
+            /*auth_token, */ id,
+        })
     }
 
     fn response(Ref(resp): Self::Response) -> HttpResponse {
