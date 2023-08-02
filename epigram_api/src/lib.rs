@@ -11,6 +11,7 @@ mod interlude {
 
     pub use axum::{extract::Path, http, response::IntoResponse, Json, TypedHeader};
     pub use serde::{Deserialize, Serialize};
+    pub use std::borrow::Cow;
     pub use time::format_description::well_known::Iso8601;
     pub use time::OffsetDateTime;
     pub use utoipa::ToSchema;
@@ -147,7 +148,6 @@ impl utoipa::OpenApi for ApiDoc {
 fn playground() {
     use ed25519_dalek::Signer;
     use gram::*;
-    use sha2::Digest;
 
     struct Seed {
         content: String,
@@ -162,7 +162,8 @@ fn playground() {
     fn seed_to_gram(seed: Seed, parent_id: Option<String>) -> Gram {
         let created_at = OffsetDateTime::now_utc();
         let mime = "text/html".to_string();
-        let author_pubkey = hex::encode(seed.keypair.verifying_key().to_bytes());
+        let author_pubkey =
+            data_encoding::HEXLOWER_PERMISSIVE.encode(&seed.keypair.verifying_key().to_bytes()[..]);
         let json = serde_json::to_string(&serde_json::json!([
             0,
             author_pubkey,
@@ -172,13 +173,12 @@ fn playground() {
             parent_id
         ]))
         .unwrap();
-        let id = {
-            let mut hasher = sha2::Sha256::new();
-            hasher.update(&dbg!(json)[..]);
-            hasher.finalize()
-        };
-        let sig = hex::encode(seed.keypair.sign(&id[..]).to_bytes());
-        let id = hex::encode(&id[..]);
+        let id = blake3::hash(json.as_bytes());
+
+        let sig = seed.keypair.sign(id.as_bytes()).to_bytes();
+        let sig = data_encoding::HEXLOWER_PERMISSIVE.encode(&sig[..]);
+
+        let id = data_encoding::HEXLOWER_PERMISSIVE.encode(id.as_bytes());
         Gram {
             id,
             created_at,
@@ -270,7 +270,7 @@ fn playground() {
         }],
     );
 
-    println!("{}", serde_json::to_string_pretty(&out).unwrap());
+    println!("{out:#?}");
     for Gram {
         id,
         content,
@@ -283,8 +283,7 @@ fn playground() {
     } in out
     {
         println!(
-            r#"
-        ,(
+            r#"            ,(
             '\x{id}'::bytea
             ,$${content}$$
             ,'{mime}'

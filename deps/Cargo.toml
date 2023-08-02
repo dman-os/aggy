@@ -10,11 +10,10 @@ path = "lib.rs"
 
 rand = "*"
 brotli = "*"
-hex = "*"
-base64 = "*"
 ed25519-dalek = { version = "2.0.0-rc.3", features = ["serde", "rand_core"] }
 argon2 = { package = "rust-argon2", version = "1.0.0" }
-sha2 = { version = "0.10.0" }
+blake3 = { version = "1.4" }
+data-encoding = "2.4"
 
 regex = "1.6"
 # chrono = "0.4"

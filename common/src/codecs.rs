@@ -12,7 +12,7 @@ pub mod sane_iso8601 {
             decimal_digits: None,
         })
         .encode();
-    const FORMAT: Iso8601<CONFIG> = Iso8601::<CONFIG>;
+    pub const FORMAT: Iso8601<CONFIG> = Iso8601::<CONFIG>;
 
     use time::OffsetDateTime as __TimeSerdeType;
 
@@ -23,7 +23,7 @@ pub mod sane_iso8601 {
         fn expecting(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             f.write_fmt(format_args!(
                 "a(n) `OffsetDateTime` in the format \"{0}\"",
-                "FORMAT"
+                "Iso8601"
             ))
         }
         fn visit_str<E: serde::de::Error>(self, value: &str) -> Result<__TimeSerdeType, E> {
@@ -35,7 +35,7 @@ pub mod sane_iso8601 {
         fn expecting(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             f.write_fmt(format_args!(
                 "an `Option<OffsetDateTime>` in the format \"{0}\"",
-                "FORMAT"
+                "Iso8601"
             ))
         }
         fn visit_some<D: serde::de::Deserializer<'a>>(
