@@ -124,7 +124,7 @@ impl DocumentedEndpoint for GetUser {
             email: Some(USER_01_EMAIL.into()),
             username: USER_01_USERNAME.into(),
             pic_url: Some("https:://example.com/picture.jpg".into()),
-            pub_key: crate::utils::encode_hex_multibase(
+            pub_key: common::utils::encode_hex_multibase(
                 ed25519_dalek::SigningKey::generate(&mut rand::thread_rng())
                     .verifying_key()
                     .to_bytes(),

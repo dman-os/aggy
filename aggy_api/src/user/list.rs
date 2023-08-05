@@ -49,6 +49,73 @@ crate::impl_from_auth_err!(Error);
 
 common::alias_and_ref!(ListResponse<super::User>, ListUsersResponse, Response, ser);
 
+fn validate_request(
+    request: ListRequest<UserSortingField>,
+) -> Result<(String, UserSortingField, SortingOrder, Option<String>), validator::ValidationErrors> {
+    validator::Validate::validate(&request)?;
+
+    if request.after_cursor.is_some() || request.before_cursor.is_some() {
+        let (is_after, cursor) = request
+            .after_cursor
+            .map(|cursor| (true, cursor))
+            .or_else(|| Some((false, request.before_cursor.unwrap())))
+            .unwrap();
+        let invalid_cursor_err = |msg: &'static str| {
+            let mut issues = validator::ValidationErrors::new();
+            issues.add(
+                if is_after {
+                    "afterCursor"
+                } else {
+                    "beforeCursor"
+                },
+                validator::ValidationError {
+                    code: "invalid_cursor".into(),
+                    message: Some(msg.into()),
+                    params: [(std::borrow::Cow::from("value"), serde_json::json!(cursor))]
+                        .into_iter()
+                        .collect(),
+                },
+            );
+            issues
+        };
+        let cursor: Cursor<serde_json::Value, UserSortingField> = cursor
+            .parse()
+            .map_err(|_| invalid_cursor_err("unable to decode cursor"))?;
+        // let op = match (cursor.order, is_after) {
+        //     (SortingOrder::Ascending, true) | (SortingOrder::Descending, false) => ">",
+        //     (SortingOrder::Ascending, false) | (SortingOrder::Descending, true) => "<",
+        // };
+        let op = if is_after { ">" } else { "<" };
+        // FIXME: sql injection, consider HMACing cursors
+        let clause = match cursor.field {
+            UserSortingField::Username | UserSortingField::Email => {
+                let value = cursor
+                    .value
+                    .as_str()
+                    .ok_or_else(|| invalid_cursor_err("nonsensical cursor"))?;
+                let column = cursor.field.sql_field_name();
+                format!("WHERE {column} {op} $guessme${value}$guessme$")
+            }
+            UserSortingField::CreatedAt | UserSortingField::UpdatedAt => {
+                let value = cursor
+                    .value
+                    .as_i64()
+                    .ok_or_else(|| invalid_cursor_err("nonsensical cursor"))?;
+                let column = cursor.field.sql_field_name();
+                format!("WHERE {column} {op} (TO_TIMESTAMP({value}) AT TIME ZONE 'UTC')")
+            }
+        };
+        Ok((clause, cursor.field, cursor.order, cursor.filter))
+    } else {
+        Ok((
+            "".into(),
+            request.sorting_field.unwrap_or(UserSortingField::CreatedAt),
+            request.sorting_order.unwrap_or(SortingOrder::Descending),
+            request.filter,
+        ))
+    }
+}
+
 #[async_trait::async_trait]
 impl crate::AuthenticatedEndpoint for ListUsers {
     type Request = Request;
@@ -71,81 +138,16 @@ impl crate::AuthenticatedEndpoint for ListUsers {
         _accessing_user: uuid::Uuid,
         Request(request): Self::Request,
     ) -> Result<Self::Response, Self::Error> {
-        validator::Validate::validate(&request).map_err(ValidationErrors::from)?;
-
         let crate::Db::Pg { db_pool } = &cx.db /* else {
             return Err(Error::Internal{message: "this endpoint is not implemented for this db".to_string()});
         } */;
-        let (cursor_clause, sorting_field, sorting_order, filter) = request
-            .after_cursor
-            .map(|cursor| (true, cursor))
-            .or_else(|| request.before_cursor.map(|cursor| (false, cursor)))
-            .map(|(is_after, cursor)| {
-                let invalid_cursor_err = |msg| Error::InvalidInput {
-                    issues: {
-                        let mut issues = validator::ValidationErrors::new();
-                        let cursor_field = if is_after {
-                            "afterCursor"
-                        } else {
-                            "beforeCursor"
-                        };
-                        issues.add(
-                            cursor_field,
-                            validator::ValidationError {
-                                code: "invalid_cursor".into(),
-                                message: Some(msg),
-                                params: [(
-                                    std::borrow::Cow::from("value"),
-                                    serde_json::json!(cursor),
-                                )]
-                                .into_iter()
-                                .collect(),
-                            },
-                        );
-                        issues.into()
-                    },
-                };
-                let cursor: Cursor<serde_json::Value, UserSortingField> = cursor
-                    .parse()
-                    .map_err(|_| invalid_cursor_err("unable to decode cursor".into()))?;
-                // let op = match (cursor.order, is_after) {
-                //     (SortingOrder::Ascending, true) | (SortingOrder::Descending, false) => ">",
-                //     (SortingOrder::Ascending, false) | (SortingOrder::Descending, true) => "<",
-                // };
-                let op = if is_after { ">" } else { "<" };
-                // FIXME: sql injection
-                let clause = match cursor.field {
-                    UserSortingField::Username | UserSortingField::Email => {
-                        let value = cursor
-                            .value
-                            .as_str()
-                            .ok_or_else(|| invalid_cursor_err("nonsensical cursor".into()))?;
-                        let column = cursor.field.sql_field_name();
-                        format!("WHERE {column} {op} '{value}'")
-                    }
-                    UserSortingField::CreatedAt | UserSortingField::UpdatedAt => {
-                        let value = cursor
-                            .value
-                            .as_i64()
-                            .ok_or_else(|| invalid_cursor_err("nonsensical cursor".into()))?;
-                        let column = cursor.field.sql_field_name();
-                        format!("WHERE {column} {op} (TO_TIMESTAMP({value}) AT TIME ZONE 'UTC')")
-                    }
-                };
-                Ok::<_, Error>((clause.into(), cursor.field, cursor.order, cursor.filter))
-            })
-            .unwrap_or_else(|| {
-                Ok((
-                    std::borrow::Cow::from(""),
-                    request.sorting_field.unwrap_or(UserSortingField::CreatedAt),
-                    request.sorting_order.unwrap_or(SortingOrder::Descending),
-                    request.filter,
-                ))
-            })?;
+        let limit = request.limit.unwrap_or(DEFAULT_LIST_LIMIT);
+        let (cursor_clause, sorting_field, sorting_order, filter) =
+            validate_request(request).map_err(ValidationErrors::from)?;
+
         let (sorting_field_str, sorting_order_str) =
             (sorting_field.sql_field_name(), sorting_order.sql_key_word());
-        let limit = request.limit.unwrap_or(DEFAULT_LIST_LIMIT);
-        let results = sqlx::query(
+        let result = sqlx::query(
             format!(
                 r#"
 SELECT 
@@ -178,20 +180,28 @@ LIMIT $2 + 1
         .bind(limit as i64)
         .fetch_all(db_pool)
         .await;
-        match results {
-            Ok(results) => {
-                let more_rows_pending = results.len() == limit + 1;
-                let items = results
-                    .into_iter()
+        match result {
+            Err(sqlx::Error::RowNotFound) => Ok(ListUsersResponse {
+                cursor: None,
+                items: vec![],
+            }
+            .into()),
+            Err(err) => Err(Error::Internal {
+                message: format!("db err: {err}"),
+            }),
+            Ok(rows) => {
+                use sqlx::FromRow;
+                let more_rows_pending = rows.len() == limit + 1;
+                // map rows to structs
+                let items = rows
+                    .iter()
                     .take(limit as _)
-                    .map(|row| {
-                        use sqlx::FromRow;
-                        User::from_row(&row)
-                    })
+                    .map(User::from_row)
                     .collect::<Result<Vec<_>, _>>()
                     .map_err(|err| Error::Internal {
                         message: format!("row mapping err: {err}"),
                     })?;
+                // construct cursor if necessary
                 let cursor = if more_rows_pending {
                     Some(
                         Cursor {
@@ -219,14 +229,6 @@ LIMIT $2 + 1
                 };
                 Ok(ListUsersResponse { cursor, items }.into())
             }
-            Err(sqlx::Error::RowNotFound) => Ok(ListUsersResponse {
-                cursor: None,
-                items: vec![],
-            }
-            .into()),
-            Err(err) => Err(Error::Internal {
-                message: format!("db err: {err}"),
-            }),
         }
     }
 }
@@ -279,7 +281,7 @@ impl DocumentedEndpoint for ListUsers {
                     email: Some(USER_01_EMAIL.into()),
                     username: USER_01_USERNAME.into(),
                     pic_url: Some("https:://example.com/picture.jpg".into()),
-                    pub_key: crate::utils::encode_hex_multibase(
+                    pub_key: common::utils::encode_hex_multibase(
                         ed25519_dalek::SigningKey::generate(&mut rand::thread_rng())
                             .verifying_key()
                             .to_bytes(),
@@ -292,7 +294,7 @@ impl DocumentedEndpoint for ListUsers {
                     email: Some(USER_02_EMAIL.into()),
                     username: USER_02_USERNAME.into(),
                     pic_url: None,
-                    pub_key: crate::utils::encode_hex_multibase(
+                    pub_key: common::utils::encode_hex_multibase(
                         ed25519_dalek::SigningKey::generate(&mut rand::thread_rng())
                             .verifying_key()
                             .to_bytes(),
@@ -364,8 +366,8 @@ mod tests {
         list_users_validate,
         (request, err_field),
         {
-            match validator::Validate::validate(&request) {
-                Ok(()) => {
+            match crate::user::list::validate_request(request) {
+                Ok(_) => {
                     if let Some(err_field) = err_field {
                         panic!("validation succeeded, was expecting err on field: {err_field}");
                     }
