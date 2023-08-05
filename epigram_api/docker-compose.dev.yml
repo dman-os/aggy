@@ -7,6 +7,16 @@ services:
       - .env
     ports:
       - "5432:5432"
+  inbucket:
+    container_name: epigram-inbucket-server
+    image: docker.io/inbucket/inbucket:latest
+    # restart: unless-stopped
+    environment:
+      INBUCKET_MAILBOXNAMING: "full"
+    ports:
+      - "9000:9000"
+      - "1100:1100"
+      - "2500:2500"
   # redis:
   #   profiles:
   #     - disabled

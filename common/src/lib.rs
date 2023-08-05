@@ -413,39 +413,47 @@ where
     }
 }
 
-// impl<T> DocumentedParameter for axum::extract::Query<T>
-// where
-//     T: utoipa::ToSchema,
-// {
-//     fn to_openapi(_op_id: &str, _path: &str) -> Vec<ParameterDoc> {
-//         match T::schema() {
-//             utoipa::openapi::Schema::Object(obj) => {
-//
-//             },
-//             utoipa::openapi::Schema::Array(_) => panic!("{} is an Array schema: not allowed as Query paramter", std::any::type_name::<T>()),
-//             utoipa::openapi::Schema::OneOf(_) => panic!("{} is an OneOf schema: not allowed as Query paramter", std::any::type_name::<T>()),
-//             _ => todo!(),
-//         }
-//         vec![utoipa::openapi::path::ParameterBuilder::new().schema({
-//             .schema(match T::ref_or_schema() {
-//                 utoipa::openapi::RefOr::T(schema) => {
-//                     if T::schema_name() == "Request" {
-//                         schema.into()
-//                     } else {
-//                         utoipa::openapi::Ref::from_schema_name(T::schema_name().to_string())
-//                             .into()
-//                     }
-//                 }
-//                 ref_or => ref_or,
-//             })
-//         })
-//             // .name("body")
-//             // .parameter_in(utoipa::openapi::path::ParameterIn::Path)
-//             // .required(utoipa::openapi::Required::True)
-//             .build()
-//             .into()]
-//     }
-// }
+impl<T> DocumentedParameter for axum::extract::Query<T>
+where
+    T: utoipa::IntoParams,
+{
+    fn to_openapi(_op_id: &str, _path: &str) -> Vec<ParameterDoc> {
+        T::into_params(|| Some(openapi::path::ParameterIn::Query))
+            .into_iter()
+            .map(|par| par.into())
+            .collect()
+        /* match T::schema().1 {
+            openapi::Schema::Object(obj) => {}
+            openapi::Schema::Array(_) => panic!(
+                "{} is an Array schema: not allowed as Query paramter",
+                std::any::type_name::<T>()
+            ),
+            openapi::Schema::OneOf(_) => panic!(
+                "{} is an OneOf schema: not allowed as Query paramter",
+                std::any::type_name::<T>()
+            ),
+            _ => todo!(),
+        }
+        vec![openapi::path::ParameterBuilder::new().schema({
+            .schema(match T::ref_or_schema() {
+                openapi::RefOr::T(schema) => {
+                    if T::schema_name() == "Request" {
+                        schema.into()
+                    } else {
+                        utoipa::openapi::Ref::from_schema_name(T::schema_name().to_string())
+                            .into()
+                    }
+                }
+                ref_or => ref_or,
+            })
+        })
+            // .name("body")
+            // .parameter_in(utoipa::openapi::path::ParameterIn::Path)
+            // .required(utoipa::openapi::Required::True)
+            .build()
+            .into()] */
+    }
+}
 
 impl<T> DocumentedParameter for Option<T>
 where

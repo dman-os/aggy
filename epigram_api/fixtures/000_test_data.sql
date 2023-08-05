@@ -8,7 +8,7 @@ DO $body$
         INSERT INTO grams.grams (
             id
             ,content
-            ,mime
+            ,coty
             ,parent_id
             ,sig
             ,author_pubkey

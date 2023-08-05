@@ -5,15 +5,20 @@ use crate::interlude::*;
 pub struct Gram {
     pub id: String,
     #[serde(with = "common::codecs::sane_iso8601")]
-    pub created_at: time::OffsetDateTime,
+    pub created_at: OffsetDateTime,
     pub content: String,
-    pub mime: String,
+    pub coty: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub parent_id: Option<String>,
 
     pub author_pubkey: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub author_alias: Option<String>,
 
     pub sig: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[sqlx(skip)]
+    pub replies: Option<Vec<Gram>>,
 }
 
 mod create;
@@ -74,11 +79,12 @@ pub mod testing {
         id: GRAM_01_ID.into(),
         created_at: OffsetDateTime::now_utc(),
         content: "I wan't you to know, I wan't you to know that I'm awake.".into(),
-        mime: "text/html".into(),
+        coty: "text/html".into(),
         parent_id: None,
         author_pubkey: "f691d917d665d04bb35b65ff896478b9dd59af81ade6c6d7a98d9c19666147c87".into(),
         author_alias: Some("use1".into()),
         sig: "fcc048f2de1d7b3bf0608a3b89a1a71e4f8c8db4049980dca31efe48271ebaabb0572a62bd0346348f5ae09d0b1fd7a530ecab974fc6e474fac46b03127f19802".into(),
+        replies: default()
     }
     });
     pub static GRAM_02: Lazy<Gram> = Lazy::new(|| {
@@ -86,11 +92,12 @@ pub mod testing {
         id: GRAM_02_ID.into(),
         created_at: OffsetDateTime::now_utc(),
         content: "And I hope you're asleep.".into(),
-        mime: "text/html".into(),
+        coty: "text/html".into(),
         parent_id: Some(GRAM_01_ID.into()),
         author_pubkey: "fd093f5a4cbc24177a52b4c7b3050c2380f0da88162b84c30f8ff44bbe4e86c77".into(),
         author_alias: Some("fideroth".into()),
         sig: "f6223912f4339bf83829467a32a67cb5e87988f710b65202f86fbb43fbf194f941895e2f5578f205254132ed1d7b1ae8ce712057f19eccccdeb4c20a871fb3e0e".into(),
+        replies: default()
     }
     });
     pub static GRAM_03: Lazy<Gram> = Lazy::new(|| {
@@ -98,11 +105,12 @@ pub mod testing {
         id: GRAM_03_ID.into(),
         created_at: OffsetDateTime::now_utc(),
         content: "*air guitars madly*".into(),
-        mime: "text/html".into(),
+        coty: "text/html".into(),
         parent_id: Some(GRAM_02_ID.into()),
         author_pubkey: "f691d917d665d04bb35b65ff896478b9dd59af81ade6c6d7a98d9c19666147c87".into(),
         author_alias: Some("use1".into()),
         sig: "f8f2f73e71d7fc723e4bf0ccafec7ab6726ac0d9c61c6d3d3f4d64419e1a1109fa1502afd8f578100b33e31221fc8cce19ee526f4b6da6424feb6ebd0ccc7be00".into(),
+        replies: default()
     }
     });
     pub static GRAM_04: Lazy<Gram> = Lazy::new(|| {
@@ -110,11 +118,12 @@ pub mod testing {
         id: GRAM_04_ID.into(),
         created_at: OffsetDateTime::now_utc(),
         content: "*sads doggly*".into(),
-        mime: "text/html".into(),
+        coty: "text/html".into(),
         parent_id: Some(GRAM_03_ID.into()),
         author_pubkey: "fd093f5a4cbc24177a52b4c7b3050c2380f0da88162b84c30f8ff44bbe4e86c77".into(),
         author_alias: Some("fideroth".into()),
         sig: "f24f497b3bd42f676538fe974cc7e233c74605880b033ec7964db1734eb1aea9d7c530ee9c41376e5cad4c530bf3bb34ef75f9a2a0044ec0d2dd838e1611b2f00".into(),
+        replies: default()
     }
     });
 }

@@ -1,3 +1,17 @@
+// This will render a generic  error message if the `censor_internal_errors`
+// flag is on
+#[macro_export]
+macro_rules! internal_err {
+    {$msg:expr} =>{
+        Error::Internal {
+            #[cfg(not(censor_internal_errors))]
+            message: format!($msg),
+            #[cfg(censor_internal_errors)]
+            message: format!("internal server error"),
+        }
+    }
+}
+
 /// TODO: DRY me up
 /// This assumues utoipa is in scope
 #[macro_export]

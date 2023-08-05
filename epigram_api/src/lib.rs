@@ -11,6 +11,7 @@ mod interlude {
 
     pub use axum::{extract::Path, http, response::IntoResponse, Json, TypedHeader};
     pub use serde::{Deserialize, Serialize};
+    pub use sqlx::FromRow;
     pub use std::borrow::Cow;
     pub use time::format_description::well_known::Iso8601;
     pub use time::OffsetDateTime;
@@ -145,7 +146,7 @@ impl utoipa::OpenApi for ApiDoc {
 
 #[test]
 #[ignore]
-fn playground() {
+fn gen_grams() {
     use ed25519_dalek::Signer;
     use gram::*;
 
@@ -161,7 +162,7 @@ fn playground() {
     }
     fn seed_to_gram(seed: Seed, parent_id: Option<String>) -> Gram {
         let created_at = OffsetDateTime::now_utc();
-        let mime = "text/html".to_string();
+        let coty = "text/html".to_string();
         let author_pubkey =
             data_encoding::HEXLOWER_PERMISSIVE.encode(&seed.keypair.verifying_key().to_bytes()[..]);
         let json = serde_json::to_string(&serde_json::json!([
@@ -169,7 +170,7 @@ fn playground() {
             author_pubkey,
             created_at.unix_timestamp(),
             seed.content,
-            mime,
+            coty,
             parent_id
         ]))
         .unwrap();
@@ -183,11 +184,12 @@ fn playground() {
             id,
             created_at,
             content: seed.content.to_string(),
-            mime,
+            coty,
             parent_id,
             author_pubkey,
             author_alias: Some(seed.alias),
             sig,
+            replies: default(),
         }
     }
     fn seeds_to_gram(out: &mut Vec<Gram>, parent_id: Option<String>, seeds: Vec<Seed>) {
@@ -274,7 +276,7 @@ fn playground() {
     for Gram {
         id,
         content,
-        mime,
+        coty,
         parent_id,
         sig,
         author_pubkey,
@@ -286,7 +288,7 @@ fn playground() {
             r#"            ,(
             '\x{id}'::bytea
             ,$${content}$$
-            ,'{mime}'
+            ,'{coty}'
             ,{}
             ,'\x{sig}'::bytea
             ,'\x{author_pubkey}'::bytea
@@ -302,4 +304,37 @@ fn playground() {
             format!("{}@aggy.news", author_alias.as_ref().unwrap()),
         )
     }
+}
+
+#[test]
+#[ignore]
+fn lettre_test() {
+    tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .unwrap()
+        .block_on(async {
+            use lettre::message::header::ContentType;
+            // use lettre::transport::smtp::authentication::Credentials;
+            use lettre::{AsyncSmtpTransport, AsyncTransport, Message};
+
+            let email = Message::builder()
+                .from("NoBody <nobody@domain.tld>".parse().unwrap())
+                .reply_to("Yuin <yuin@domain.tld>".parse().unwrap())
+                .to("Hei <hei@domain.tld>".parse().unwrap())
+                .subject("Happy new year")
+                .header(ContentType::TEXT_PLAIN)
+                .body(String::from("Be happy!"))
+                .unwrap();
+
+            let mailer = AsyncSmtpTransport::<lettre::Tokio1Executor>::builder_dangerous("0")
+                .port(2500)
+                .build();
+
+            // Send the email
+            match mailer.send(email).await {
+                Ok(_) => println!("Email sent successfully!"),
+                Err(e) => panic!("Could not send email: {:?}", e),
+            }
+        });
 }
