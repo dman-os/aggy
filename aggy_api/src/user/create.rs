@@ -7,11 +7,11 @@ fn gen_pub_pri_key() {
     let pub_key = pri_key.verifying_key();
     println!(
         "pri_key: {}",
-        crate::utils::encode_hex_multibase(pri_key.to_bytes())
+        common::utils::encode_hex_multibase(pri_key.to_bytes())
     );
     println!(
         "pub_key: {}",
-        crate::utils::encode_hex_multibase(pub_key.to_bytes())
+        common::utils::encode_hex_multibase(pub_key.to_bytes())
     );
 }
 
@@ -168,7 +168,7 @@ impl DocumentedEndpoint for CreateUser {
             updated_at: time::OffsetDateTime::now_utc(),
             email: Some(USER_01_EMAIL.into()),
             username: USER_01_USERNAME.into(),
-            pub_key: crate::utils::encode_hex_multibase(
+            pub_key: common::utils::encode_hex_multibase(
                 ed25519_dalek::SigningKey::generate(&mut rand::thread_rng())
                     .verifying_key()
                     .to_bytes(),
