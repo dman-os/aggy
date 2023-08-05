@@ -80,6 +80,7 @@ redis = { version = "0.23.0", features = [
   "connection-manager",
 ] }
 bb8-redis = "0.13.1"
+lettre = { version = "0.10.4", features = ["tokio1-rustls-tls", "serde", "tracing", "smtp-transport", "pool", "builder"], default-features = false }
 
 [build-dependencies]
 cargo_toml = "0.15.3"

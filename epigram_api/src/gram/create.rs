@@ -1,5 +1,7 @@
 use crate::interlude::*;
 
+use super::Gram;
+
 #[derive(Debug, Clone)]
 pub struct CreateGram;
 
@@ -9,8 +11,8 @@ pub struct Request {
     #[schema(min_length = 1)]
     #[validate(length(min = 1))]
     pub content: String,
-    #[validate(length(min = 1), contains(pattern = "/"))] // FIXME: proper mime validation
-    pub mime: String,
+    #[validate(length(min = 1), contains(pattern = "/"))] // FIXME: proper coty validation
+    pub coty: String,
     pub parent_id: Option<String>,
     pub author_pubkey: String,
     #[serde(with = "common::codecs::sane_iso8601")]
@@ -38,7 +40,7 @@ fn validate_request(
         req.author_pubkey,
         req.created_at.unix_timestamp(),
         req.content,
-        req.mime,
+        req.coty,
         req.parent_id,
     ]))
     .unwrap();
@@ -121,7 +123,7 @@ fn validate_request(
     Ok((id_bytes, pubkey, sig))
 }
 
-pub type Response = Ref<super::Gram>;
+pub type Response = Ref<Gram>;
 
 #[derive(Debug, Serialize, thiserror::Error, utoipa::ToSchema)]
 #[serde(crate = "serde", rename_all = "camelCase", tag = "error")]
@@ -160,16 +162,16 @@ impl Endpoint for CreateGram {
             None => None,
         };
 
-        let out: super::Gram = match &cx.db {
-            crate::Db::Pg { db_pool } => sqlx::query_as!(
-                super::Gram,
-                r#"
+        let out: Gram = match &cx.db {
+            crate::Db::Pg { db_pool } => {
+                let row = sqlx::query!(
+                    r#"
 WITH gram as (
     INSERT INTO grams.grams (
         id
         ,created_at
         ,content
-        ,mime
+        ,coty
         ,parent_id
         ,sig
         ,author_pubkey
@@ -191,39 +193,51 @@ WITH gram as (
     util.multibase_encode_hex(id) as "id!"
     ,created_at
     ,content
-    ,mime
+    ,coty
     ,util.multibase_encode_hex(parent_id) as "parent_id?"
     ,util.multibase_encode_hex(sig) as "sig!"
     ,util.multibase_encode_hex(author_pubkey) as "author_pubkey!"
     ,author_alias as "author_alias?"
 FROM gram
 "#,
-                &id_bytes,
-                &request.created_at,
-                &request.content,
-                &request.mime,
-                parent_id.as_ref(),
-                &sig.to_bytes()[..],
-                pubkey.as_bytes(),
-                request.author_alias.as_ref(),
-            )
-            .fetch_one(db_pool)
-            .await
-            .map_err(|err| match &err {
-                sqlx::Error::Database(boxed) if boxed.constraint().is_some() => {
-                    match boxed.constraint().unwrap() {
-                        "grams_parent_id_fkey" => Error::ParentNotFound {
-                            id: request.parent_id.unwrap(),
-                        },
-                        _ => Error::Internal {
-                            message: format!("db error: {err}"),
-                        },
+                    &id_bytes,
+                    &request.created_at,
+                    &request.content,
+                    &request.coty,
+                    parent_id.as_ref(),
+                    &sig.to_bytes()[..],
+                    pubkey.as_bytes(),
+                    request.author_alias.as_ref(),
+                )
+                .fetch_one(db_pool)
+                .await
+                .map_err(|err| match &err {
+                    sqlx::Error::Database(boxed) if boxed.constraint().is_some() => {
+                        match boxed.constraint().unwrap() {
+                            "grams_parent_id_fkey" => Error::ParentNotFound {
+                                id: request.parent_id.unwrap(),
+                            },
+                            _ => Error::Internal {
+                                message: format!("db error: {err}"),
+                            },
+                        }
                     }
+                    _ => Error::Internal {
+                        message: format!("db error: {err}"),
+                    },
+                })?;
+                Gram {
+                    id: row.id,
+                    created_at: row.created_at,
+                    content: row.content,
+                    coty: row.coty,
+                    parent_id: row.parent_id,
+                    author_pubkey: row.author_pubkey,
+                    author_alias: row.author_alias,
+                    sig: row.sig,
+                    replies: default(),
                 }
-                _ => Error::Internal {
-                    message: format!("db error: {err}"),
-                },
-            })?,
+            }
         };
         Ok(out.into())
     }
@@ -336,7 +350,7 @@ mod tests {
             request.author_pubkey,
             request.created_at.unix_timestamp(),
             request.content,
-            request.mime,
+            request.coty,
             request.parent_id,
         ]))
         .unwrap();
@@ -348,7 +362,7 @@ mod tests {
 
     fn fixture_request_json() -> serde_json::Value {
         let content = "The stars are a burning sun";
-        let mime = "text/plain";
+        let coty = "text/plain";
         let prikey = common::utils::decode_hex_multibase(TEST_PRIVKEY).unwrap();
         let prikey = ed25519_dalek::SigningKey::from_bytes(&prikey[..].try_into().unwrap());
         let author_pubkey = TEST_PUBKEY;
@@ -360,7 +374,7 @@ mod tests {
             author_pubkey,
             created_at.unix_timestamp(),
             content,
-            mime,
+            coty,
             parent_id,
         ]))
         .unwrap();
@@ -372,7 +386,7 @@ mod tests {
             .unwrap();
         serde_json::json!({
             "content": content,
-            "mime": mime,
+            "coty": coty,
             "createdAt": created_at,
             "authorPubkey": author_pubkey,
             "parentId": parent_id,
@@ -428,9 +442,9 @@ mod tests {
             },
             Some("id"),
         ),
-        rejects_bad_id_mime: (
+        rejects_bad_id_coty: (
             Request {
-                mime: "application/octet-stream".into(),
+                coty: "application/octet-stream".into(),
                 ..fixture_request()
             },
             Some("id"),
@@ -456,15 +470,25 @@ mod tests {
             },
             Some("content"),
         ),
-        rejects_invalid_mime: (
+        rejects_invalid_coty: (
             fix_id_and_sig(
                 Request {
-                mime: "INVALID".into(),
+                coty: "INVALID".into(),
                     ..fixture_request()
                 },
                 TEST_PRIVKEY
             ),
-            Some("mime"),
+            Some("coty"),
+        ),
+        rejects_non_recent_timestamp: (
+            fix_id_and_sig(
+                Request {
+                    created_at: OffsetDateTime::from_unix_timestamp(1_690_962_268).unwrap(),
+                    ..fixture_request()
+                },
+                TEST_PRIVKEY
+            ),
+            Some("created_at"),
         ),
         rejects_bad_sig: (
             Request {

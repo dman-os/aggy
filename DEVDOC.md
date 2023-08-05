@@ -39,7 +39,6 @@
 - [ ] Epigram
   - [ ] Get
   - [ ] Create
-  - [ ] Update
   - [ ] Delete
   - [ ] List
 - [ ] Submit Epigram
