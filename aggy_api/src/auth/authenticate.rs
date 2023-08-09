@@ -173,9 +173,8 @@ mod tests {
 
     #[tokio::test]
     async fn authenticate_works_with_username() {
-        let test_cx = TestContext::new(common::function!()).await;
+        let (test_cx, cx) = cx_fn(common::function!()).await;
         {
-            let cx = state_fn(&test_cx);
             let app = crate::auth::router().with_state(cx.clone());
 
             let body_json = serde_json::json!({
@@ -223,9 +222,8 @@ mod tests {
 
     #[tokio::test]
     async fn authenticate_works_with_email() {
-        let test_cx = TestContext::new(common::function!()).await;
+        let (test_cx, cx) = cx_fn(common::function!()).await;
         {
-            let cx = state_fn(&test_cx);
             let app = crate::auth::router().with_state(cx.clone());
 
             let body_json = serde_json::json!({
@@ -273,9 +271,8 @@ mod tests {
 
     #[tokio::test]
     async fn authenticate_fails_if_username_not_found() {
-        let test_cx = TestContext::new(common::function!()).await;
+        let (test_cx, cx) = cx_fn(common::function!()).await;
         {
-            let cx = state_fn(&test_cx);
             let app = crate::auth::router().with_state(cx);
 
             let body_json = serde_json::json!({
@@ -312,9 +309,8 @@ mod tests {
 
     #[tokio::test]
     async fn authenticate_fails_if_email_not_found() {
-        let test_cx = TestContext::new(common::function!()).await;
+        let (test_cx, cx) = cx_fn(common::function!()).await;
         {
-            let cx = state_fn(&test_cx);
             let app = crate::auth::router().with_state(cx);
 
             let body_json = serde_json::json!({
@@ -351,9 +347,8 @@ mod tests {
 
     #[tokio::test]
     async fn authenticate_fails_if_password_is_wrong() {
-        let test_cx = TestContext::new(common::function!()).await;
+        let (test_cx, cx) = cx_fn(common::function!()).await;
         {
-            let cx = state_fn(&test_cx);
             let app = crate::auth::router().with_state(cx);
 
             let body_json = serde_json::json!({

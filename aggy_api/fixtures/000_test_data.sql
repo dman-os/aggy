@@ -46,6 +46,19 @@ DO $body$
             '127.0.0.1'::inet,
             'ViolaWWW'
         );
+        INSERT INTO posts.posts (
+            id
+            ,author_id
+            ,epigram_id
+            ,title
+            ,url
+        ) VALUES (
+            'a4dac041-b0a4-4afd-a1a6-83ed69c4dfe5'::uuid
+            ,le_user.id
+            ,'\x65fdb61533b12c0be75352af20134ba2e7cc1d7ccba7c81a6eb3dad18ab7d0cd'::bytea
+            ,'Atlantis resurfaces 20 miles off the coast of Hong Kong!'
+            ,'https://simple.news/p/atlantis-resurface'
+        );
     END;
 $body$ LANGUAGE PLpgSQL;
 
@@ -147,6 +160,19 @@ DO $body$
             CURRENT_TIMESTAMP + interval '7 days',
             '8.0.0.1'::inet,
             'ViolaWWW'
+        );
+        INSERT INTO posts.posts (
+            id
+            ,author_id
+            ,epigram_id
+            ,title
+            ,url
+        ) VALUES (
+            'd7c222dd-f4bb-4639-ae6e-41c94cc57be1'::uuid
+            ,le_user.id
+            ,'\xeb80db9a7dd7a0c4b1b02720993233cf12f6102f3f016c4b1b6340b7c3f2bee0'::bytea
+            ,'P=NP in 9 dimensions'
+            ,'https://arxiv.org/abs/31415.193'
         );
     END;
 $body$ LANGUAGE PLpgSQL;

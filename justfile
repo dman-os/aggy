@@ -17,6 +17,7 @@ gen-sqlx-offline:
   rm .sqlx/query-*.json  || true
   # force full recomplile of crates that use sqlx queries
   cargo clean -p aggy_api
+  cargo clean -p epigram_api
   SQLX_TMP={{SQLX_TMP}} \
   SQLX_OFFLINE_DIR={{SQLX_OFFLINE_DIR}} \
   cargo check

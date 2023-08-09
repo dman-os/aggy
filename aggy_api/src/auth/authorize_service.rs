@@ -50,17 +50,16 @@ mod tests {
         authorize_policy tokio,
         (service_secret, resource_actions),
         {
-        let test_cx = TestContext::new(common::function!()).await;
-        {
-            let cx = state_fn(&test_cx);
-            let cx = SharedServiceContext(ServiceContext(cx));
-            for (resource, action) in resource_actions {
-                cx.authorize(authorize_service::Request {
-                    service_secret: BearerToken::bearer(&service_secret[..]).unwrap_or_log(),
-                    resource,
-                    action
-                }).await.unwrap_or_log();
-            }
+            let (test_cx, cx) = cx_fn(common::function!()).await;
+            {
+                let cx = SharedServiceContext(ServiceContext(cx));
+                for (resource, action) in resource_actions {
+                    cx.authorize(authorize_service::Request {
+                        service_secret: BearerToken::bearer(&service_secret[..]).unwrap_or_log(),
+                        resource,
+                        action
+                    }).await.unwrap_or_log();
+                }
             }
             test_cx.close().await;
         },

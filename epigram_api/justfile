@@ -25,13 +25,13 @@ flyway *ARGS:
 
 # Apply migrations to database.
 db-mig:
+  cargo sqlx database create
   @just flyway migrate
 
 # Apply migrations to database.
 db-reset:
   cargo sqlx database drop -y
-  cargo sqlx database create
-  @just flyway migrate
+  @just db-mig
   @just db-seed
 
 db-seed:

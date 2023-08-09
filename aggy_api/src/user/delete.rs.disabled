@@ -138,7 +138,7 @@ mod tests {
                             method: "DELETE",
                             status: $status,
                             router: crate::user::router(),
-                            state_fn: crate::utils::testing::state_fn,
+                            cx_fn: crate::utils::testing::cx_fn,
                             auth_token: $auth_token,
                             $(extra_assertions: $extra_fn,)?
                         },

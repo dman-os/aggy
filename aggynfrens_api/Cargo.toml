@@ -3,6 +3,10 @@ name = "aggynfrens_api"
 version.workspace = true
 edition.workspace = true
 
+[[bin]]
+name = "aggynfrens_api"
+path = "main.rs"
+
 [features]
 default = ["dylink"]
 
@@ -11,6 +15,7 @@ deps = { workspace = true }
 dylink = { workspace = true, optional = true }
 common = { workspace = true }
 aggy_api = { workspace = true, default-features = false }
+epigram_api = { workspace = true, default-features = false }
 
 shadow-rs = { workspace = true }
 sqlx = { workspace = true }

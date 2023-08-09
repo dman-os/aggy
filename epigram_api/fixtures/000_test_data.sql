@@ -7,6 +7,7 @@ DO $body$
     BEGIN
         INSERT INTO grams.grams (
             id
+            ,created_at
             ,content
             ,coty
             ,parent_id
@@ -17,74 +18,180 @@ DO $body$
         ) 
         VALUES 
         (
-            '\x26204069c8e8525502946fa9e7b9f51a1a3a9fb3bbd1263bf6fdc39af8572d61'::bytea
+            '\x43203d798236edc55a20be5de2f9a401514b62e85ad0792fdffe4ca9b1b6a5a0'::bytea
+            ,to_timestamp(1691479928)
             ,$$I wan't you to know, I wan't you to know that I'm awake.$$
             ,'text/html'
             ,NULL
-            ,'\xcc048f2de1d7b3bf0608a3b89a1a71e4f8c8db4049980dca31efe48271ebaabb0572a62bd0346348f5ae09d0b1fd7a530ecab974fc6e474fac46b03127f19802'::bytea
-            ,'\x691d917d665d04bb35b65ff896478b9dd59af81ade6c6d7a98d9c19666147c87'::bytea
+            ,'\x2492541d9c12871570caeecb1aaec6d2197b5e058405393dc624a2299568055ec092fe91ea34a85b99cb45921fbab2999f5aa7f215956e4806f948b49a0d020d'::bytea
+            ,'\xdc67469e70cbcab49a7840ab1b44d56c7963a7ca24c626ebb792fa7f514f37aa'::bytea
             ,'use1'
             ,'use1@aggy.news'
         )
         ,(
-            '\x863a254a782fae5bcde8629a01a5591a89d1e6bfc531ce5ae4443e149dc29d77'::bytea
+            '\xa52b926f893d3019cdbddbf4c553232c43035b4fe08eb26c31892e3b57b3dfc5'::bytea
+            ,to_timestamp(1691479928)
             ,$$And I hope you're asleep.$$
             ,'text/html'
-            ,'\x26204069c8e8525502946fa9e7b9f51a1a3a9fb3bbd1263bf6fdc39af8572d61'::bytea
-            ,'\x6223912f4339bf83829467a32a67cb5e87988f710b65202f86fbb43fbf194f941895e2f5578f205254132ed1d7b1ae8ce712057f19eccccdeb4c20a871fb3e0e'::bytea
-            ,'\xd093f5a4cbc24177a52b4c7b3050c2380f0da88162b84c30f8ff44bbe4e86c77'::bytea
+            ,'\x43203d798236edc55a20be5de2f9a401514b62e85ad0792fdffe4ca9b1b6a5a0'::bytea
+            ,'\x8e5934a66506ec9742c0af2393fcc5158da433012284f071b8c4a47b721cec3db91057f59f3f609bc23eaabe97a55524aff30ff12eb18b1d3cf55eaf981e3601'::bytea
+            ,'\x43366142dc9ce1022ce9ec9deb72b0242ed3e097c8d7531cad8bf982cf9edb7f'::bytea
             ,'fideroth'
             ,'fideroth@aggy.news'
         )
         ,(
-            '\xa3bf486c93ed2e6d5d61ecff467670eee74c85942441ddd9422d1139b8044c5b'::bytea
+            '\x733866a0fd613e6afbd4687d8c5a4116cd298403c31fecf88f84c5961fc53a23'::bytea
+            ,to_timestamp(1691479928)
             ,$$*air guitars madly*$$
             ,'text/html'
-            ,'\x863a254a782fae5bcde8629a01a5591a89d1e6bfc531ce5ae4443e149dc29d77'::bytea
-            ,'\x8f2f73e71d7fc723e4bf0ccafec7ab6726ac0d9c61c6d3d3f4d64419e1a1109fa1502afd8f578100b33e31221fc8cce19ee526f4b6da6424feb6ebd0ccc7be00'::bytea
-            ,'\x691d917d665d04bb35b65ff896478b9dd59af81ade6c6d7a98d9c19666147c87'::bytea
+            ,'\xa52b926f893d3019cdbddbf4c553232c43035b4fe08eb26c31892e3b57b3dfc5'::bytea
+            ,'\xfae46b531cb4ef8e466baa4d14e0fa8eec249345387717f72b28789c559486ab1b17b88e3bf3f22adafc6654dc8fc606fcbcbfcb82bed4254ccf142ed2c05a05'::bytea
+            ,'\xdc67469e70cbcab49a7840ab1b44d56c7963a7ca24c626ebb792fa7f514f37aa'::bytea
             ,'use1'
             ,'use1@aggy.news'
         )
-            ,(
-            '\x8e007922fb38461df02aae6409276ba8f9eb39c64066c585ffccb0023146cd79'::bytea
+        ,(
+            '\x0ae08db70cf1ff1d6d56248e59c6ab3adb1f6e34e3fe3fee61f636cc2f4851e1'::bytea
+            ,to_timestamp(1691479928)
             ,$$*sads doggly*$$
             ,'text/html'
-            ,'\xa3bf486c93ed2e6d5d61ecff467670eee74c85942441ddd9422d1139b8044c5b'::bytea
-            ,'\x24f497b3bd42f676538fe974cc7e233c74605880b033ec7964db1734eb1aea9d7c530ee9c41376e5cad4c530bf3bb34ef75f9a2a0044ec0d2dd838e1611b2f00'::bytea
-            ,'\xd093f5a4cbc24177a52b4c7b3050c2380f0da88162b84c30f8ff44bbe4e86c77'::bytea
+            ,'\x733866a0fd613e6afbd4687d8c5a4116cd298403c31fecf88f84c5961fc53a23'::bytea
+            ,'\x85b92cd7c5d5e79778cf7698f728b6fec0c34f94300c9c59abbe755f526df461d35819f19d3c3704192e9f2b0cb1dbfeb900710e32c2afcca9a2469d8a832d09'::bytea
+            ,'\x43366142dc9ce1022ce9ec9deb72b0242ed3e097c8d7531cad8bf982cf9edb7f'::bytea
             ,'fideroth'
             ,'fideroth@aggy.news'
         )
-            ,(
-            '\xb9c347e6bdc757c3068d1f3a3c6b9d8e21af1c6608724bed0efb9d0e2e0ac1f7'::bytea
+        ,(
+            '\xa67c768430edde87d5e85cff972cf4d5f2380852c08eb6b9ed78074e2be24839'::bytea
+            ,to_timestamp(1691479928)
             ,$$What gives?$$
             ,'text/html'
-            ,'\x26204069c8e8525502946fa9e7b9f51a1a3a9fb3bbd1263bf6fdc39af8572d61'::bytea
-            ,'\x4a8521a7b30fb07b63c8d028efb2366aa0d2356449a08817a4328bda28381ed4c5b7527ab5c956817b437981f6320ea4dbca4a7ab25f73e1157417e294196c06'::bytea
-            ,'\x5ee665a116a24fd6a6f6b60f44cd8424b67282258ade3e0d7f84abcf9cf94bed'::bytea
+            ,'\x43203d798236edc55a20be5de2f9a401514b62e85ad0792fdffe4ca9b1b6a5a0'::bytea
+            ,'\x1f908f36e9d7270ff223eb683ff6fa154f22b3a804210e03487f5653c0a496d73f553ab432842e6db14f55fcdf33df6a2c68bb2743a81ef9a5824f923e89ab09'::bytea
+            ,'\xc9e8342fe4acdf2263b6b28db67319cc3f39bca5f4164d72791889df373d4842'::bytea
             ,'the_i18n_man'
             ,'the_i18n_man@aggy.news'
         )
-            ,(
-            '\x17d2d48476d24b39f6fe339027581bc51b4b52bc0abd36d2abbad8ef09a2656e'::bytea
+        ,(
+            '\x866c79e7f970e997f676c1b7a1e8992b71bcf55e4830b677b3fdb4045055af02'::bytea
+            ,to_timestamp(1691479928)
             ,$$What doesn't?$$
             ,'text/html'
-            ,'\xb9c347e6bdc757c3068d1f3a3c6b9d8e21af1c6608724bed0efb9d0e2e0ac1f7'::bytea
-            ,'\xe6de2657ad68b530572f945bb6b674bc058f34eb20aa74f2ce80deb98cc914fbfb5de0af82f8e18a2b9bb90a55e26aa83629f863c7a9b6e740f9abe559a11b02'::bytea
-            ,'\xbf9ba40d4bf80f00a5e44d52049bd4f97fc7aacca5c954adf91953b5c9a0c664'::bytea
+            ,'\xa67c768430edde87d5e85cff972cf4d5f2380852c08eb6b9ed78074e2be24839'::bytea
+            ,'\xb2629d183ee1f50948d72f8a2c4af231bcc8c892b04c5febe3a04f9f3e93027b91a9b9efb4fc6113a95d4c372e5fd4a6e2ff40ea8292e8a0c4c708bdaaf88a0f'::bytea
+            ,'\xad9828dd4e3061f37508124b4843b42dfd109ac94366099e3e6df7666806d3f6'::bytea
             ,'wgt'
             ,'wgt@aggy.news'
         )
-            ,(
-            '\xc811bd14ca4bf8a318166e59117342cfed93adbde95249cc5d7ea84195b5201e'::bytea
+        ,(
+            '\xa6089a9b605ea78f1b34604f20cec525c93a183223a9d3e3dbb2097cd7c2b1cb'::bytea
+            ,to_timestamp(1691479928)
             ,$$Stop redditing!!!$$
             ,'text/html'
-            ,'\x26204069c8e8525502946fa9e7b9f51a1a3a9fb3bbd1263bf6fdc39af8572d61'::bytea
-            ,'\xb4bcc052e2a10603f29d841299b8b39f363e68c0aaf0fb39e3f75daba71380dd088ad8f2a8f49c1d421e17c50754c43ab2260965aef0fd2b62498458f3e60306'::bytea
-            ,'\x2e5d6e21a133a30ac7e7685e9a67ec3d70db810be1b8dc5af5a065b7f4d2a0aa'::bytea
+            ,'\x43203d798236edc55a20be5de2f9a401514b62e85ad0792fdffe4ca9b1b6a5a0'::bytea
+            ,'\x741402cd5be00a0ac1bfef34ba6b2360cd3985b2962e82d1ba7aa5d851c490169a527a5421037b88dd640c7fd0d08d4c38cd33e2349fd1b61eeba8a44008de0f'::bytea
+            ,'\x3581abc925c8a5f5cb9a6e5fe168ec231ac2a50c4b7292cfdef7a498c5882ec6'::bytea
             ,'ftw'
             ,'ftw@aggy.news'
+        )
+        ,(
+            '\x65fdb61533b12c0be75352af20134ba2e7cc1d7ccba7c81a6eb3dad18ab7d0cd'::bytea
+            ,to_timestamp(1691479928)
+            ,$$<a href="https://simple.news/p/atlantis-resurface">Atlantis resurfaces 20 miles off the coast of Hong Kong!</a>$$
+            ,'text/html'
+            ,NULL
+            ,'\xd0b46381a21ed65e5d0f86cd5fdc64336b3d8610f397f2d99f1b4a80298fa952e85a0e268011303910e21b4c19d18a7c275d3be818eac39611d3ca3a3fd2900d'::bytea
+            ,'\x7c5bade04be3bb0fb9bd33f5eec539863c0c82866e333e525311823ef44b8cf5'::bytea
+            ,'sabrina'
+            ,'sabrina@aggy.news'
+        )
+        ,(
+            '\xdc1b39fd3b63293a353328f69a20cf054db32c39fe183e5b16331ef78bc48227'::bytea
+            ,to_timestamp(1691479928)
+            ,$$I'd like to know what the probablities of this being a psyop are considering international relations and the situation in the pacific?$$
+            ,'text/html'
+            ,'\x65fdb61533b12c0be75352af20134ba2e7cc1d7ccba7c81a6eb3dad18ab7d0cd'::bytea
+            ,'\xf721c55d35a5c847a709f6dad1c665c2442c9e199463763de3ec169f2469c4ffb3a9857d033b6d743bfccb2e2787ad4033bb36cee0611b5ba02d7ce10d94130f'::bytea
+            ,'\x433d788d36ec57c3529e6c95a6b473244afd3abc8cef75129083e0e027b1472f'::bytea
+            ,'archie'
+            ,'archie@aggy.news'
+        )
+        ,(
+            '\x085db90b4892a8109d37a4bf77f7a47a5f0a2de435dda9d329173dfc8fcfb572'::bytea
+            ,to_timestamp(1691479928)
+            ,$$95% a psyop.$$
+            ,'text/html'
+            ,'\xdc1b39fd3b63293a353328f69a20cf054db32c39fe183e5b16331ef78bc48227'::bytea
+            ,'\xdac73deede8c2536d656205edaa50572759337825709b18e4c21b404d715593a03ffef1d1f1252c5be13048daa4a42d8d99d9061135a0b612c50e14b77d52505'::bytea
+            ,'\x7348c0e069deff565de5de523a1c4966ecf3318516da669f49ed76f5317b4830'::bytea
+            ,'betty'
+            ,'betty@aggy.news'
+        )
+        ,(
+            '\x597a236b9ea50c2ffbb26314e68c0716852c6a86ffa1a4a7f1cb5678ac23853b'::bytea
+            ,to_timestamp(1691479928)
+            ,$$I was hoping for paragraphs.$$
+            ,'text/html'
+            ,'\x085db90b4892a8109d37a4bf77f7a47a5f0a2de435dda9d329173dfc8fcfb572'::bytea
+            ,'\xa65a6fccf70513a645f67ececa8d6c0aae12f00d7472bbf2bff23c632a88d277adb277a35822cdc1a2019d51ffa896198f97a055e706f6f35fd4bbd6d8bb3303'::bytea
+            ,'\x433d788d36ec57c3529e6c95a6b473244afd3abc8cef75129083e0e027b1472f'::bytea
+            ,'archie'
+            ,'archie@aggy.news'
+        )
+        ,(
+            '\x7fe3533f7aa61051b8fc12f3e7b8384f002180377a0a8d8caacb07743d7ec0f0'::bytea
+            ,to_timestamp(1691479928)
+            ,$$No one here knows enough for paragraphs.$$
+            ,'text/html'
+            ,'\x597a236b9ea50c2ffbb26314e68c0716852c6a86ffa1a4a7f1cb5678ac23853b'::bytea
+            ,'\x896b96bdcbab79f04065efc37f0b55810aa02eaa16e5f6a49a570be57197827b014b830aada19d11069c24e162c93c85c983b75591597a56e51eab44397bd305'::bytea
+            ,'\x7348c0e069deff565de5de523a1c4966ecf3318516da669f49ed76f5317b4830'::bytea
+            ,'betty'
+            ,'betty@aggy.news'
+        )
+        ,(
+            '\x7bf7c9a55cf79d2d1263dbd775a224bba4c64d04897037a0eb9d1ae47c7707f6'::bytea
+            ,to_timestamp(1691479928)
+            ,$$How do you do fellow terrestrials? We come in peace.$$
+            ,'text/html'
+            ,'\x65fdb61533b12c0be75352af20134ba2e7cc1d7ccba7c81a6eb3dad18ab7d0cd'::bytea
+            ,'\x47493656559c182f1a983aa8f54f674d93b155c58e82478fb7cf850865466931e4d313f8f897d2d45066c01955919433fbdf7215d5c021909b8dc87e9d9d0109'::bytea
+            ,'\xd46dcedda371eeb9d82fab2ca320a2654abcfae210ebf5046a44483e4bb53632'::bytea
+            ,'veronica'
+            ,'veronica@aggy.news'
+        )
+        ,(
+            '\x1c25b31ede76035fe0ed5178d90f4dca491671797d6af89bab0f66526af90e84'::bytea
+            ,to_timestamp(1691479928)
+            ,$$How're you able to access this messageboard?$$
+            ,'text/html'
+            ,'\x7bf7c9a55cf79d2d1263dbd775a224bba4c64d04897037a0eb9d1ae47c7707f6'::bytea
+            ,'\xdcbd8c54614a7001af6bc809b5047751b586092e342b92e42347be2c8e49f56052ae1241d7250808ea12381827f0bff17e3cf8de39ae816d27426aabb5038700'::bytea
+            ,'\x7c5bade04be3bb0fb9bd33f5eec539863c0c82866e333e525311823ef44b8cf5'::bytea
+            ,'sabrina'
+            ,'sabrina@aggy.news'
+        )
+        ,(
+            '\x3d07d559f711233c9ba32207dda651c577954b7f10224125ab5d8cb11f66c125'::bytea
+            ,to_timestamp(1691479928)
+            ,$$Atlantis runs on a UNIX derivate.$$
+            ,'text/html'
+            ,'\x1c25b31ede76035fe0ed5178d90f4dca491671797d6af89bab0f66526af90e84'::bytea
+            ,'\x681ddc61486f7e291656d0f76be2268e608a0c5e57dd2e62371a9371a34114bf045059ecfce45b91c320ced8ef06baedf124388f27b5f250879d1d04ac75d007'::bytea
+            ,'\xd46dcedda371eeb9d82fab2ca320a2654abcfae210ebf5046a44483e4bb53632'::bytea
+            ,'veronica'
+            ,'veronica@aggy.news'
+        )
+        ,(
+            '\xeb80db9a7dd7a0c4b1b02720993233cf12f6102f3f016c4b1b6340b7c3f2bee0'::bytea
+            ,to_timestamp(1691479928)
+            ,$$<a href="https://arxiv.org/abs/31415.193">P=NP in 9 dimensions</a>$$
+            ,'text/html'
+            ,NULL
+            ,'\x8915f932a935e10e665b8f92bf205f67e1d4321a38f307113b9a7c9bbc45b7b1918384882ce099457fb29a8274a0ff8331046ac4f944f1d3f98ea5884350c606'::bytea
+            ,'\xd46dcedda371eeb9d82fab2ca320a2654abcfae210ebf5046a44483e4bb53632'::bytea
+            ,'veronica'
+            ,'veronica@aggy.news'
         )
         ;
     END;

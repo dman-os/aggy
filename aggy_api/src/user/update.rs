@@ -396,7 +396,7 @@ mod tests {
                             method: "PATCH",
                             status: $status,
                             router: crate::user::router(),
-                            state_fn: crate::utils::testing::state_fn,
+                            cx_fn: crate::utils::testing::cx_fn,
                             body: $json_body,
                             $(check_json: $check_json,)?
                             auth_token: $auth_token,

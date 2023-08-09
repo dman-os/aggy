@@ -229,7 +229,7 @@ mod tests {
                             method: "POST",
                             status: $status,
                             router: crate::web::router(),
-                            state_fn: crate::utils::testing::state_fn_service,
+                            cx_fn: crate::utils::testing::cx_fn_service,
                             body: $json_body,
                             $(check_json: $check_json,)?
                             auth_token: $auth_token,

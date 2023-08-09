@@ -38,7 +38,7 @@ use interlude::*;
 
 pub mod gram;
 mod macros;
-mod utils;
+pub mod utils;
 
 use crate::utils::*;
 
@@ -83,7 +83,9 @@ impl axum::extract::FromRef<SharedContext> for SharedServiceContext {
 // shadow_rs::shadow!(build);
 
 pub fn router(state: SharedContext) -> axum::Router {
-    axum::Router::new().with_state(state.clone())
+    axum::Router::new()
+        .merge(gram::router())
+        .with_state(state.clone())
     // .merge(web::router().with_state(SharedServiceContext(ServiceContext(state))))
 }
 
@@ -105,7 +107,7 @@ impl utoipa::OpenApi for ApiDoc {
             )
             .paths({
                 let builder = openapi::path::PathsBuilder::new();
-                // let builder = user::paths(builder, "/epigram"); //FIXME: make this dyamic
+                let builder = gram::paths(builder, "/epigram"); //FIXME: make this dyamic
                 builder.build()
             })
             .components(Some({
@@ -123,13 +125,10 @@ impl utoipa::OpenApi for ApiDoc {
                         <common::utils::ValidationErrorsKind as utoipa::ToSchema>::schema(),
                         <common::utils::ValidationError as utoipa::ToSchema>::schema(),
                     ]);
-                // let builder = user::components(builder);
+                let builder = gram::components(builder);
                 builder.build()
             }))
-            .tags(Some([
-                // auth::TAG.into(),
-                common::DEFAULT_TAG.into(),
-            ]))
+            .tags(Some([gram::TAG.into(), common::DEFAULT_TAG.into()]))
             .build();
         if let Some(components) = openapi.components.as_mut() {
             use utoipa::openapi::security::*;
@@ -144,6 +143,43 @@ impl utoipa::OpenApi for ApiDoc {
     }
 }
 
+#[async_trait::async_trait]
+pub trait Client {
+    async fn get_gram(
+        &self,
+        request: crate::gram::get::Request,
+    ) -> Result<crate::gram::get::Response, Box<dyn std::error::Error>>;
+}
+
+pub struct InProcClient {
+    pub cx: SharedContext,
+}
+
+#[async_trait::async_trait]
+impl Client for InProcClient {
+    async fn get_gram(
+        &self,
+        request: crate::gram::get::Request,
+    ) -> Result<crate::gram::get::Response, Box<dyn std::error::Error + 'static>> {
+        crate::gram::get::GetGram
+            .handle(&self.cx, request)
+            .await
+            .map_err(|err| err.into())
+    }
+}
+
+pub struct HttpClient {}
+
+#[async_trait::async_trait]
+impl Client for HttpClient {
+    async fn get_gram(
+        &self,
+        _: crate::gram::get::Request,
+    ) -> Result<crate::gram::get::Response, Box<dyn std::error::Error + 'static>> {
+        todo!("epigram_api::HttpClient is not yet implemented")
+    }
+}
+
 #[test]
 #[ignore]
 fn gen_grams() {
@@ -154,14 +190,14 @@ fn gen_grams() {
         content: String,
         keypair: ed25519_dalek::SigningKey,
         alias: String,
-        children: Option<Vec<Seed>>,
+        replies: Option<Vec<Seed>>,
     }
     struct Author {
         keypair: ed25519_dalek::SigningKey,
         alias: String,
     }
     fn seed_to_gram(seed: Seed, parent_id: Option<String>) -> Gram {
-        let created_at = OffsetDateTime::now_utc();
+        let created_at = OffsetDateTime::from_unix_timestamp(1_691_479_928).unwrap();
         let coty = "text/html".to_string();
         let author_pubkey =
             data_encoding::HEXLOWER_PERMISSIVE.encode(&seed.keypair.verifying_key().to_bytes()[..]);
@@ -194,7 +230,7 @@ fn gen_grams() {
     }
     fn seeds_to_gram(out: &mut Vec<Gram>, parent_id: Option<String>, seeds: Vec<Seed>) {
         for mut seed in seeds.into_iter() {
-            let children = seed.children.take();
+            let children = seed.replies.take();
             let gram = seed_to_gram(seed, parent_id.clone());
             let parent_id = gram.id.clone();
             out.push(gram);
@@ -227,49 +263,155 @@ fn gen_grams() {
             alias: "ftw".to_string(),
         },
     ];
+    let aggy_authors = [
+        Author {
+            keypair: ed25519_dalek::SigningKey::from_bytes(
+                common::utils::decode_hex_multibase(
+                    "feb28ec6fa7d60b719af82e4de57391dfda3fd354a344acd5f4ae143ca6554d3e",
+                )
+                .unwrap()
+                .as_slice()
+                .try_into()
+                .unwrap(),
+            ),
+            alias: "sabrina".to_string(),
+        },
+        Author {
+            keypair: ed25519_dalek::SigningKey::from_bytes(
+                common::utils::decode_hex_multibase(
+                    "f7ceffe6e9dd0cba3bd2cd362e472b0b94d0f4b1417c665f7249967ebdc7fd6a0",
+                )
+                .unwrap()
+                .as_slice()
+                .try_into()
+                .unwrap(),
+            ),
+            alias: "archie".to_string(),
+        },
+        Author {
+            keypair: ed25519_dalek::SigningKey::from_bytes(
+                common::utils::decode_hex_multibase(
+                    "f223c52751e99d3acfa7dc2a9185fe7b6ec8f3acbc5503ae9f3815033e1f04846",
+                )
+                .unwrap()
+                .as_slice()
+                .try_into()
+                .unwrap(),
+            ),
+            alias: "betty".to_string(),
+        },
+        Author {
+            keypair: ed25519_dalek::SigningKey::from_bytes(
+                common::utils::decode_hex_multibase(
+                    "f359b2f5d06e233765fc2afcc51e39b716b0d790d4233f8f07e1ebb08a3de8223",
+                )
+                .unwrap()
+                .as_slice()
+                .try_into()
+                .unwrap(),
+            ),
+            alias: "veronica".to_string(),
+        },
+    ];
     seeds_to_gram(
         &mut out,
         None,
-        vec![Seed {
-            content: "I wan't you to know, I wan't you to know that I'm awake.".to_string(),
-            keypair: authors[0].keypair.clone(),
-            alias: authors[0].alias.clone(),
-            children: Some(vec![
-                Seed {
-                    content: "And I hope you're asleep.".to_string(),
-                    keypair: authors[1].keypair.clone(),
-                    alias: authors[1].alias.clone(),
-                    children: Some(vec![Seed {
-                        content: "*air guitars madly*".to_string(),
-                        keypair: authors[0].keypair.clone(),
-                        alias: authors[0].alias.clone(),
-                        children: Some(vec![Seed {
-                            content: "*sads doggly*".to_string(),
-                            keypair: authors[1].keypair.clone(),
-                            alias: authors[1].alias.clone(),
-                            children: None,
+        vec![
+            Seed {
+                content: "I wan't you to know, I wan't you to know that I'm awake.".to_string(),
+                keypair: authors[0].keypair.clone(),
+                alias: authors[0].alias.clone(),
+                replies: Some(vec![
+                    Seed {
+                        content: "And I hope you're asleep.".to_string(),
+                        keypair: authors[1].keypair.clone(),
+                        alias: authors[1].alias.clone(),
+                        replies: Some(vec![Seed {
+                            content: "*air guitars madly*".to_string(),
+                            keypair: authors[0].keypair.clone(),
+                            alias: authors[0].alias.clone(),
+                            replies: Some(vec![Seed {
+                                content: "*sads doggly*".to_string(),
+                                keypair: authors[1].keypair.clone(),
+                                alias: authors[1].alias.clone(),
+                                replies: None,
+                            }]),
                         }]),
-                    }]),
-                },
-                Seed {
-                    content: "What gives?".to_string(),
-                    keypair: authors[2].keypair.clone(),
-                    alias: authors[2].alias.clone(),
-                    children: Some(vec![Seed {
-                        content: "What doesn't?".to_string(),
-                        keypair: authors[3].keypair.clone(),
-                        alias: authors[3].alias.clone(),
-                        children: None,
-                    }]),
-                },
-                Seed {
-                    content: "Stop redditing!!!".to_string(),
-                    keypair: authors[4].keypair.clone(),
-                    alias: authors[4].alias.clone(),
-                    children: None,
-                },
-            ]),
-        }],
+                    },
+                    Seed {
+                        content: "What gives?".to_string(),
+                        keypair: authors[2].keypair.clone(),
+                        alias: authors[2].alias.clone(),
+                        replies: Some(vec![Seed {
+                            content: "What doesn't?".to_string(),
+                            keypair: authors[3].keypair.clone(),
+                            alias: authors[3].alias.clone(),
+                            replies: None,
+                        }]),
+                    },
+                    Seed {
+                        content: "Stop redditing!!!".to_string(),
+                        keypair: authors[4].keypair.clone(),
+                        alias: authors[4].alias.clone(),
+                        replies: None,
+                    },
+                ]),
+            },
+            Seed {
+                content: r#"<a href="https://simple.news/p/atlantis-resurface">Atlantis resurfaces 20 miles off the coast of Hong Kong!</a>"#
+                    .to_string(),
+                keypair: aggy_authors[0].keypair.clone(),
+                alias: aggy_authors[0].alias.clone(),
+                replies: Some(vec![
+                    Seed {
+                        content: "I'd like to know what the probablities of this being a psyop are considering international relations and the situation in the pacific?".to_string(),
+                        keypair: aggy_authors[1].keypair.clone(),
+                        alias: aggy_authors[1].alias.clone(),
+                        replies: Some(vec![Seed {
+                            content: "95% a psyop.".to_string(),
+                            keypair: aggy_authors[2].keypair.clone(),
+                            alias: aggy_authors[2].alias.clone(),
+                            replies: Some(vec![Seed {
+                                content: "I was hoping for paragraphs.".to_string(),
+                                keypair: aggy_authors[1].keypair.clone(),
+                                alias: aggy_authors[1].alias.clone(),
+                                replies: Some(vec![Seed {
+                                    content: "No one here knows enough for paragraphs.".to_string(),
+                                    keypair: aggy_authors[2].keypair.clone(),
+                                    alias: aggy_authors[2].alias.clone(),
+                                    replies: None,
+                                }]),
+                            }]),
+                        }]),
+                    },
+                    Seed {
+                        content: "How do you do fellow terrestrials? We come in peace.".to_string(),
+                        keypair: aggy_authors[3].keypair.clone(),
+                        alias: aggy_authors[3].alias.clone(),
+                        replies: Some(vec![Seed {
+                            content: "How're you able to access this messageboard?".to_string(),
+                            keypair: aggy_authors[0].keypair.clone(),
+                            alias: aggy_authors[0].alias.clone(),
+                            replies: Some(vec![
+                                Seed {
+                                    content: "Atlantis runs on a UNIX derivate.".to_string(),
+                                    keypair: aggy_authors[3].keypair.clone(),
+                                    alias: aggy_authors[3].alias.clone(),
+                                    replies: None,
+                                }
+                            ]),
+                        }]),
+                    },
+                ]),
+            },
+            Seed {
+                content: r#"<a href="https://arxiv.org/abs/31415.193">P=NP in 9 dimensions</a>"#
+                    .to_string(),
+                keypair: aggy_authors[3].keypair.clone(),
+                alias: aggy_authors[3].alias.clone(),
+                replies: None,
+            },
+        ],
     );
 
     println!("{out:#?}");
@@ -281,12 +423,14 @@ fn gen_grams() {
         sig,
         author_pubkey,
         author_alias,
+        created_at,
         ..
     } in out
     {
         println!(
-            r#"            ,(
+            r#"        ,(
             '\x{id}'::bytea
+            ,to_timestamp({})
             ,$${content}$$
             ,'{coty}'
             ,{}
@@ -295,6 +439,7 @@ fn gen_grams() {
             ,'{}'
             ,'{}'
         )"#,
+            created_at.unix_timestamp(),
             if let Some(id) = parent_id {
                 format!("'\\x{id}'::bytea")
             } else {

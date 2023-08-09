@@ -187,7 +187,7 @@ mod tests {
                             method: "GET",
                             status: $status,
                             router: crate::web::router(),
-                            state_fn: crate::utils::testing::state_fn_service,
+                            cx_fn: crate::utils::testing::cx_fn_service,
                             $(check_json: $check_json,)?
                             auth_token: $auth_token,
                             $(extra_assertions: $extra_fn,)?

@@ -13,7 +13,9 @@ mod interlude {
 
     pub use axum::{extract::Path, http, response::IntoResponse, Json, TypedHeader};
     pub use serde::{Deserialize, Serialize};
+    pub use sqlx::FromRow;
     pub use time::format_description::well_known::Iso8601;
+    pub use time::OffsetDateTime;
     pub use utoipa::ToSchema;
     pub use uuid::Uuid;
     pub use validator::Validate;
@@ -39,6 +41,7 @@ use interlude::*;
 
 pub mod auth;
 mod macros;
+pub mod post;
 pub mod user;
 pub mod utils;
 pub mod web;
@@ -56,10 +59,10 @@ pub struct Config {
     pub service_secret: String,
 }
 
-#[derive(Debug)]
 pub struct Context {
     pub config: Config,
     pub db: Db,
+    pub epigram: Box<dyn epigram_api::Client + Send + Sync + 'static>,
 }
 
 #[derive(Debug)]

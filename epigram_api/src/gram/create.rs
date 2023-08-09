@@ -524,7 +524,7 @@ mod tests {
                             method: "POST",
                             status: $status,
                             router: crate::gram::router(),
-                            state_fn: crate::utils::testing::state_fn,
+                            cx_fn: crate::utils::testing::cx_fn,
                             body: $json_body,
                             $(check_json: $check_json,)?
                             $(extra_assertions: $extra_fn,)?

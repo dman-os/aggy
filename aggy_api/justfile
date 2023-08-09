@@ -25,17 +25,18 @@ flyway *ARGS:
 
 # Apply migrations to database.
 db-mig:
+  cargo sqlx database create
   @just flyway migrate
+
+# Seed db from the fixtures.
+db-seed:
+  @just psql-tty < fixtures/000_test_data.sql  
 
 # Apply migrations to database.
 db-reset:
   cargo sqlx database drop -y
-  cargo sqlx database create
-  @just flyway migrate
+  @just db-mig 
   @just db-seed
-
-db-seed:
-  @just psql-tty < fixtures/000_test_data.sql  
 
 alias dev := dev-up
 
@@ -50,4 +51,5 @@ logs-dev:
   podman-compose -f docker-compose.yml -f docker-compose.dev.yml logs -f -n -t
 
 test *ARGS:
+  cargo test --no-run # build using cargo test since nextest builds don't jive with SQLx
   cargo nextest run {{ARGS}}

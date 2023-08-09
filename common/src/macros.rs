@@ -368,7 +368,7 @@ macro_rules! integration_table_tests {
             method: $method:expr,
             status: $status:expr,
             router: $router:expr,
-            state_fn: $state_fn:expr,
+            cx_fn: $cx_fn:expr,
             $(body: $json_body:expr,)?
             $(check_json: $check_json:expr,)?
             $(auth_token: $auth_token:expr,)?
@@ -380,7 +380,7 @@ macro_rules! integration_table_tests {
             #[allow(unused_variables)]
             #[tokio::test]
             async fn $name() {
-                let mut test_cx = $crate::utils::testing::TestContext::new($crate::function_full!()).await;
+                let (mut test_cx, state) = $cx_fn($crate::function_full!()).await;
                 {
                     let mut request = axum::http::Request::builder()
                                         .method($method)
@@ -415,7 +415,7 @@ macro_rules! integration_table_tests {
                             .body(Default::default()).unwrap_or_log()
                     };
 
-                    let app = $router.with_state($state_fn(&test_cx));
+                    let app = $router.with_state(state);
                     use tower::ServiceExt;
                     let res = app
                         .oneshot(request)
@@ -640,7 +640,9 @@ mod tests {
                             method: "POST",
                             status: $status,
                             router: sum_router(),
-                            state_fn: |_| (),
+                            cx_fn: (|name: &'static str| async move {
+                                (crate::utils::testing::TestContext::new(name.to_string(), []), (),)
+                            }),
                             body: $json_body,
                             $(check_json: $check_json,)?
                             $(extra_assertions: $extra_fn,)?

@@ -40,6 +40,7 @@ fn main() {
                     let cx = Context {
                         db: Db::Pg { db_pool },
                         config,
+                        epigram: Box::new(epigram_api::HttpClient {}),
                     };
                     let cx = std::sync::Arc::new(cx);
                     axum::Router::new()

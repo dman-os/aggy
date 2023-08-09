@@ -24,6 +24,7 @@ dependencies = [
  "common",
  "deps",
  "dylink",
+ "epigram_api",
  "sqlx",
  "validator",
 ]
@@ -36,6 +37,7 @@ dependencies = [
  "common",
  "deps",
  "dylink",
+ "epigram_api",
  "shadow-rs",
  "sqlx",
 ]

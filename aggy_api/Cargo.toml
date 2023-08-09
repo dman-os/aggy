@@ -22,6 +22,7 @@ default = ["dylink"]
 deps = { workspace = true }
 dylink = { workspace = true, optional = true }
 common = { workspace = true }
+epigram_api = { workspace = true }
 
 # shadow-rs = { workspace = true }
 validator = { workspace = true }

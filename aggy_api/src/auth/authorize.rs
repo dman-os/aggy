@@ -72,9 +72,8 @@ mod tests {
         authorize_policy tokio,
         (username, id, resource_actions),
         {
-        let test_cx = TestContext::new(common::function!()).await;
+        let (test_cx, cx) = cx_fn(common::function!()).await;
         {
-            let cx = state_fn(&test_cx);
                 let res = authenticate::Authenticate.handle(&cx, authenticate::Request{
                     identifier: username.to_string(),
                     password: "password".into()

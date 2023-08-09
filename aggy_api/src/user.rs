@@ -29,7 +29,7 @@ pub const TAG: common::Tag = common::Tag {
 };
 
 mod create;
-mod delete;
+// mod delete;
 mod get;
 mod list;
 mod update;
@@ -40,7 +40,7 @@ pub fn router() -> axum::Router<SharedContext> {
         .merge(EndpointWrapper::new(create::CreateUser))
         .merge(EndpointWrapper::new(update::UpdateUser))
         .merge(EndpointWrapper::new(list::ListUsers))
-        .merge(EndpointWrapper::new(delete::DeleteUser))
+    // .merge(EndpointWrapper::new(delete::DeleteUser))
 }
 
 pub fn components(
@@ -50,7 +50,7 @@ pub fn components(
     let builder = create::CreateUser::components(builder);
     let builder = update::UpdateUser::components(builder);
     let builder = list::ListUsers::components(builder);
-    let builder = delete::DeleteUser::components(builder);
+    // let builder = delete::DeleteUser::components(builder);
     builder
         .schemas_from_iter([
             <User as utoipa::ToSchema>::schema(),
@@ -68,7 +68,7 @@ pub fn paths(
         (get::GetUser::PATH, get::GetUser::path_item()),
         (create::CreateUser::PATH, create::CreateUser::path_item()),
         (update::UpdateUser::PATH, update::UpdateUser::path_item()),
-        (delete::DeleteUser::PATH, delete::DeleteUser::path_item()),
+        // (delete::DeleteUser::PATH, delete::DeleteUser::path_item()),
         (list::ListUsers::PATH, list::ListUsers::path_item()),
     ]
     .into_iter()

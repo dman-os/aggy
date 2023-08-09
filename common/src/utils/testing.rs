@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use deps::*;
 
 pub use axum::http;
@@ -46,12 +48,110 @@ pub type LocalBoxFuture<'a, T> = std::pin::Pin<Box<dyn futures::Future<Output = 
 
 pub type ExtraAssertions<'c, 'f> = dyn Fn(ExtraAssertionAgs<'c>) -> LocalBoxFuture<'f, ()>;
 
+pub struct TestDb {
+    pub db_name: String,
+    pub pool: sqlx::postgres::PgPool,
+    clean_up_closure: Option<Box<dyn FnOnce() -> futures::future::BoxFuture<'static, ()>>>,
+}
+
+impl TestDb {
+    pub async fn new(db_name: String, migrations_root: &std::path::Path) -> Self {
+        use sqlx::prelude::*;
+        let opts = sqlx::postgres::PgConnectOptions::default()
+            .host(
+                std::env::var("TEST_DB_HOST")
+                    .expect("TEST_DB_HOST wasn't found in enviroment")
+                    .as_str(),
+            )
+            .port(
+                std::env::var("TEST_DB_PORT")
+                    .expect("TEST_DB_PORT wasn't found in enviroment")
+                    .parse()
+                    .expect("TEST_DB_PORT is not a valid number"),
+            )
+            .username(
+                std::env::var("TEST_DB_USER")
+                    .expect("TEST_DB_USER wasn't found in enviroment")
+                    .as_str(),
+            )
+            .log_statements("DEBUG".parse().unwrap());
+
+        let opts = if let Ok(pword) = std::env::var("TEST_DB_PASS") {
+            opts.password(pword.as_str())
+        } else {
+            opts
+        };
+
+        let mut connection = opts
+            .clone()
+            .connect()
+            .await
+            .expect("Failed to connect to Postgres without db");
+
+        connection
+            .execute(&format!(r###"DROP DATABASE IF EXISTS {db_name}"###)[..])
+            .await
+            .expect("Failed to drop old database.");
+
+        connection
+            .execute(&format!(r###"CREATE DATABASE {db_name}"###)[..])
+            .await
+            .expect("Failed to create database.");
+
+        let opts = opts.database(&db_name[..]);
+
+        // migrate database
+        let pool = sqlx::PgPool::connect_with(opts)
+            .await
+            .expect("Failed to connect to Postgres as test db.");
+
+        // sqlx::migrate!("./migrations")
+        sqlx::migrate::Migrator::new(FlywayMigrationSource(&migrations_root.join("migrations")))
+            .await
+            .expect(
+                format!("error setting up migrator for {migrations_root:?}/migrations").as_str(),
+            )
+            .run(&pool)
+            .await
+            .expect("Failed to migrate the database");
+        // sqlx::migrate!("./fixtures")
+        sqlx::migrate::Migrator::new(migrations_root.join("./fixtures"))
+            .await
+            .expect(format!("error setting up migrator for {migrations_root:?}/fixtures").as_str())
+            .set_ignore_missing(true) // don't inspect migrations store
+            .run(&pool)
+            .await
+            .expect("Failed to add test data");
+
+        Self {
+            db_name: db_name.clone(),
+            pool,
+            clean_up_closure: Some(Box::new(move || {
+                Box::pin(async move {
+                    connection
+                        .execute(&format!(r###"DROP DATABASE {db_name}"###)[..])
+                        .await
+                        .expect("Failed to drop test database.");
+                })
+            })),
+        }
+    }
+
+    /// Call this after all holders of the [`SharedContext`] have been dropped.
+    pub async fn close(self) {
+        let Self {
+            pool,
+            mut clean_up_closure,
+            ..
+        } = self;
+        pool.close().await;
+        (clean_up_closure.take().unwrap())();
+    }
+}
+
 pub struct TestContext {
     pub test_name: String,
-    pub db_pool: Option<sqlx::postgres::PgPool>,
-    // clean_up_closure: Option<Box<dyn FnOnce(Context) -> ()>>,
-    clean_up_closure:
-        Option<Box<dyn FnOnce(sqlx::postgres::PgPool) -> futures::future::BoxFuture<'static, ()>>>,
+    pub pools: HashMap<String, TestDb>,
 }
 
 /// NOTE: this is only good for tests and doesn't handle re-runnable migs well
@@ -156,120 +256,26 @@ impl<'a> sqlx::migrate::MigrationSource<'a> for FlywayMigrationSource<'a> {
 }
 
 impl TestContext {
-    pub async fn new(test_name: &'static str) -> Self {
+    pub fn new(test_name: String, pools: impl Into<HashMap<String, TestDb>>) -> Self {
         setup_tracing_once();
-        let test_name = test_name.replace("::tests::", "").replace("::", "_");
-
-        use sqlx::prelude::*;
-        let opts = sqlx::postgres::PgConnectOptions::default()
-            .host(
-                std::env::var("TEST_DB_HOST")
-                    .expect("TEST_DB_HOST wasn't found in enviroment")
-                    .as_str(),
-            )
-            .port(
-                std::env::var("TEST_DB_PORT")
-                    .expect("TEST_DB_PORT wasn't found in enviroment")
-                    .parse()
-                    .expect("TEST_DB_PORT is not a valid number"),
-            )
-            .username(
-                std::env::var("TEST_DB_USER")
-                    .expect("TEST_DB_USER wasn't found in enviroment")
-                    .as_str(),
-            )
-            .log_statements("DEBUG".parse().unwrap());
-
-        let opts = if let Ok(pword) = std::env::var("TEST_DB_PASS") {
-            opts.password(pword.as_str())
-        } else {
-            opts
-        };
-
-        let mut connection = opts
-            .clone()
-            .connect()
-            .await
-            .expect("Failed to connect to Postgres without db");
-
-        connection
-            .execute(&format!(r###"DROP DATABASE IF EXISTS {}"###, test_name)[..])
-            .await
-            .expect("Failed to drop old database.");
-
-        connection
-            .execute(&format!(r###"CREATE DATABASE {}"###, test_name)[..])
-            .await
-            .expect("Failed to create database.");
-
-        let opts = opts.database(&test_name[..]);
-
-        // migrate database
-        let db_pool = sqlx::PgPool::connect_with(opts)
-            .await
-            .expect("Failed to connect to Postgres as test db.");
-
-        // sqlx::migrate!("./migrations")
-        sqlx::migrate::Migrator::new(FlywayMigrationSource(std::path::Path::new("./migrations")))
-            .await
-            .expect("error setting up migrator for ./migrations")
-            .run(&db_pool)
-            .await
-            .expect("Failed to migrate the database");
-        // sqlx::migrate!("./fixtures")
-        sqlx::migrate::Migrator::new(std::path::Path::new("./fixtures"))
-            .await
-            .expect("error setting up migrator for ./fixtures")
-            .set_ignore_missing(true) // don't inspect migrations store
-            .run(&db_pool)
-            .await
-            .expect("Failed to add test data");
-
         Self {
-            test_name: test_name.clone(), // someone needs it downwind
-            db_pool: Some(db_pool),
-            clean_up_closure: Some(Box::new(move |db_pool| {
-                Box::pin(async move {
-                    db_pool.close().await;
-                    connection
-                        .execute(&format!(r###"DROP DATABASE {test_name}"###)[..])
-                        .await
-                        .expect("Failed to drop test database.");
-                })
-            })),
+            test_name,
+            pools: pools.into(),
         }
     }
 
     /// Call this after all holders of the [`SharedContext`] have been dropped.
     pub async fn close(mut self) {
-        let db_pool = self.db_pool.take().unwrap_or_log();
-        (self.clean_up_closure.take().unwrap())(db_pool);
-    }
-    /* pub async fn new_with_service<F>(
-        test_name: &'static str,
-        cfg_callback: F,
-    ) -> (
-        Self,
-        // TestServer,
-        impl FnOnce(Self) -> futures::future::BoxFuture<'static, ()>,
-    )
-    where
-        F:Fn(& Context) -> axum::Router + 'static + Send + Sync + Clone + Copy
-    {
-        let router = cfg_callback
-        Self {
-            test_name,
+        for (_, db) in self.pools.drain() {
+            db.close().await;
         }
-    } */
+    }
 }
 
 impl Drop for TestContext {
     fn drop(&mut self) {
-        if self.db_pool.is_some() {
-            tracing::warn!(
-                "test context dropped without cleaning up for: {}",
-                self.test_name
-            )
+        for (db_name, _) in &self.pools {
+            tracing::warn!("test context dropped without cleaning up for db: {db_name}",)
         }
     }
 }
