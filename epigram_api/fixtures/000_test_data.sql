@@ -183,6 +183,28 @@ DO $body$
             ,'veronica@aggy.news'
         )
         ,(
+            '\x01e94b7091caea92f5d0f07a06efc088feaf848f44b6b65dfffa2df1357fcf7b'::bytea
+            ,to_timestamp(1691479928)
+            ,$$<a href="nncp://857893/8471291/7583921748203.txt">Tokyo report shows record numbers of discarded limbs infesting underways</a>$$
+            ,'text/html'
+            ,NULL
+            ,'\xdd0020b113fe35ba2f9b6d6f7e8f26ef6feb50810bcc2ab1bc3735be56d99c7ab41d93b806266528d057897286885bd650370ef36cb2ad3b84cf9d902ca21b03'::bytea
+            ,'\x433d788d36ec57c3529e6c95a6b473244afd3abc8cef75129083e0e027b1472f'::bytea
+            ,'archie'
+            ,'archie@aggy.news'
+        )
+        ,(
+            '\x6a6ed2475a9d74e1a630b581617c975dd8c2a7fa1a53f3711fef9212bbb13504'::bytea
+            ,to_timestamp(1691479928)
+            ,$$<a href="https://nil.null/89897898-rem-adware-danger">REM sleep adware considered dangerous</a>$$
+            ,'text/html'
+            ,NULL
+            ,'\x4cdcc809ae4881c6c8be320232d0cfb0182223ea38441f70e6c354f618a51dd3e4145b8fc1d3d0dde2f93856c8821a76f02f33554c6ebed59de77a0199319808'::bytea
+            ,'\x7348c0e069deff565de5de523a1c4966ecf3318516da669f49ed76f5317b4830'::bytea
+            ,'betty'
+            ,'betty@aggy.news'
+        )
+        ,(
             '\xeb80db9a7dd7a0c4b1b02720993233cf12f6102f3f016c4b1b6340b7c3f2bee0'::bytea
             ,to_timestamp(1691479928)
             ,$$<a href="https://arxiv.org/abs/31415.193">P=NP in 9 dimensions</a>$$

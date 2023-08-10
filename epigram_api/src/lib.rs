@@ -405,6 +405,20 @@ fn gen_grams() {
                 ]),
             },
             Seed {
+                content: r#"<a href="nncp://857893/8471291/7583921748203.txt">Tokyo report shows record numbers of discarded limbs infesting underways</a>"#
+                    .to_string(),
+                keypair: aggy_authors[1].keypair.clone(),
+                alias: aggy_authors[1].alias.clone(),
+                replies: None,
+            },
+            Seed {
+                content: r#"<a href="https://nil.null/89897898-rem-adware-danger">REM sleep adware considered dangerous</a>"#
+                    .to_string(),
+                keypair: aggy_authors[2].keypair.clone(),
+                alias: aggy_authors[2].alias.clone(),
+                replies: None,
+            },
+            Seed {
                 content: r#"<a href="https://arxiv.org/abs/31415.193">P=NP in 9 dimensions</a>"#
                     .to_string(),
                 keypair: aggy_authors[3].keypair.clone(),

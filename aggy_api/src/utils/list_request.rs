@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 pub use common::utils::{Cursor, SortingField, SortingOrder, DEFAULT_LIST_LIMIT};
 
-#[derive(Debug, Serialize, Deserialize, validator::Validate, utoipa::ToSchema)]
+#[derive(Debug, Serialize, Deserialize, validator::Validate, ToSchema, utoipa::IntoParams)]
 #[serde(crate = "serde", rename_all = "camelCase")]
 #[validate(schema(function = "validate_list_req"))]
 #[aliases(ListUsersRequest = ListRequest<UserSortingField>)]

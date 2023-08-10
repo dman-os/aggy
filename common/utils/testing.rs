@@ -48,6 +48,35 @@ pub type LocalBoxFuture<'a, T> = std::pin::Pin<Box<dyn futures::Future<Output = 
 
 pub type ExtraAssertions<'c, 'f> = dyn Fn(ExtraAssertionAgs<'c>) -> LocalBoxFuture<'f, ()>;
 
+pub struct TestContext {
+    pub test_name: String,
+    pub pools: HashMap<String, TestDb>,
+}
+
+impl TestContext {
+    pub fn new(test_name: String, pools: impl Into<HashMap<String, TestDb>>) -> Self {
+        Self {
+            test_name,
+            pools: pools.into(),
+        }
+    }
+
+    /// Call this after all holders of the [`SharedContext`] have been dropped.
+    pub async fn close(mut self) {
+        for (_, db) in self.pools.drain() {
+            db.close().await;
+        }
+    }
+}
+
+impl Drop for TestContext {
+    fn drop(&mut self) {
+        for (db_name, _) in &self.pools {
+            tracing::warn!("test context dropped without cleaning up for db: {db_name}",)
+        }
+    }
+}
+
 pub struct TestDb {
     pub db_name: String,
     pub pool: sqlx::postgres::PgPool,
@@ -149,11 +178,6 @@ impl TestDb {
     }
 }
 
-pub struct TestContext {
-    pub test_name: String,
-    pub pools: HashMap<String, TestDb>,
-}
-
 /// NOTE: this is only good for tests and doesn't handle re-runnable migs well
 #[derive(Debug)]
 struct FlywayMigrationSource<'a>(&'a std::path::Path);
@@ -165,29 +189,52 @@ impl<'a> sqlx::migrate::MigrationSource<'a> for FlywayMigrationSource<'a> {
         'a,
         Result<Vec<sqlx::migrate::Migration>, sqlx::error::BoxDynError>,
     > {
-        Box::pin(async move {
-            struct WalkCx<'a> {
-                migrations: &'a mut Vec<sqlx::migrate::Migration>,
-                rerunnable_ctr: i64,
-            }
-            fn walk_dir<'a>(
-                path: &'a std::path::Path,
-                cx: &'a mut WalkCx,
-            ) -> futures::future::BoxFuture<'a, Result<(), sqlx::error::BoxDynError>> {
-                Box::pin(async move {
-                    let mut s = tokio::fs::read_dir(path).await?;
-                    while let Some(entry) = s.next_entry().await? {
+        #[derive(Clone)]
+        struct WalkCx {
+            // migrations: &'a mut Vec<sqlx::migrate::Migration>,
+            tx: tokio::sync::mpsc::Sender<
+                Result<sqlx::migrate::Migration, sqlx::error::BoxDynError>,
+            >,
+        }
+        fn walk_dir<'a>(
+            path: &'a std::path::Path,
+            cx: WalkCx,
+        ) -> futures::future::BoxFuture<'a, ()> {
+            Box::pin(async move {
+                let mut s = match tokio::fs::read_dir(path).await {
+                    Ok(val) => val,
+                    Err(err) => {
+                        cx.tx.send(Err(err.into())).await.unwrap_or_log();
+                        return;
+                    }
+                };
+                loop {
+                    let entry = match s.next_entry().await {
+                        Ok(Some(val)) => val,
+                        Ok(None) => break,
+                        Err(err) => {
+                            cx.tx.send(Err(err.into())).await.unwrap_or_log();
+                            return;
+                        }
+                    };
+                    let cx = cx.clone();
+                    _ = tokio::task::spawn(async move {
                         // std::fs::metadata traverses symlinks
-                        let metadata = std::fs::metadata(&entry.path())?;
+                        let metadata = match std::fs::metadata(&entry.path()) {
+                            Ok(val) => val,
+                            Err(err) => {
+                                cx.tx.send(Err(err.into())).await.unwrap_or_log();
+                                return;
+                            }
+                        };
                         if metadata.is_dir() {
-                            walk_dir(&entry.path(), cx).await?;
-                            return Ok(());
+                            walk_dir(&entry.path(), cx).await;
+                            return;
                         }
                         if !metadata.is_file() {
                             // not a file; ignore
-                            continue;
+                            return;
                         }
-
                         let file_name = entry.file_name().to_string_lossy().into_owned();
 
                         let parts = file_name.splitn(2, "__").collect::<Vec<_>>();
@@ -197,25 +244,23 @@ impl<'a> sqlx::migrate::MigrationSource<'a> for FlywayMigrationSource<'a> {
                             || !(parts[0].starts_with('m') || parts[0].starts_with('r'))
                         {
                             // not of the format: <VERSION>_<DESCRIPTION>.sql; ignore
-                            continue;
+                            return;
                         }
-
                         let version: i64 = if parts[0].starts_with('m') {
                             let Ok(v_parts) = parts[0][1..]
                                 .split('.')
                                 .map(|str| str.parse())
                                 .collect::<Result<Vec<i64>, _>>() else
                             {
-                                 continue;
+                                return;
                             };
                             if v_parts.len() != 3 {
-                                continue;
+                                return;
                             }
                             (v_parts[0] * 1_000_000) + (v_parts[1] * 1000) + v_parts[2]
                         } else {
-                            // run rerunnable migrations last
-                            cx.rerunnable_ctr += 1;
-                            i64::MAX - cx.rerunnable_ctr
+                            // set -1 to differentiate reruunnable migrations
+                            -1
                         };
 
                         let migration_type = sqlx::migrate::MigrationType::from_filename(parts[1]);
@@ -225,58 +270,48 @@ impl<'a> sqlx::migrate::MigrationSource<'a> for FlywayMigrationSource<'a> {
                             .replace('_', " ")
                             .to_owned();
 
-                        let sql = tokio::fs::read_to_string(&entry.path()).await?;
+                        let sql = match tokio::fs::read_to_string(&entry.path()).await {
+                            Ok(val) => val,
+                            Err(err) => {
+                                cx.tx.send(Err(err.into())).await.unwrap_or_log();
+                                return;
+                            }
+                        };
 
-                        cx.migrations.push(sqlx::migrate::Migration::new(
-                            version,
-                            std::borrow::Cow::Owned(description),
-                            migration_type,
-                            std::borrow::Cow::Owned(sql),
-                        ));
-                    }
-
-                    Ok(())
-                })
-            }
+                        cx.tx
+                            .send(Ok(sqlx::migrate::Migration::new(
+                                version,
+                                std::borrow::Cow::Owned(description),
+                                migration_type,
+                                std::borrow::Cow::Owned(sql),
+                            )))
+                            .await
+                            .unwrap_or_log();
+                    });
+                }
+            })
+        }
+        Box::pin(async move {
+            let (tx, mut rx) = tokio::sync::mpsc::channel(8);
+            let cx = WalkCx { tx };
+            walk_dir(&self.0.canonicalize()?, cx).await;
+            let mut rerunnable_ctr = i64::MAX; // NOTE: imax
             let mut migrations = Vec::new();
-            walk_dir(
-                &self.0.canonicalize()?,
-                &mut (WalkCx {
-                    rerunnable_ctr: 0,
-                    migrations: &mut migrations,
-                }),
-            )
-            .await?;
+            while let Some(result) = rx.recv().await {
+                let mut migration = result?;
+                // this is a rerunnable migration
+                // those must always run last
+                if migration.version == -1 {
+                    migration.version = rerunnable_ctr;
+                    rerunnable_ctr -= 1;
+                }
+                migrations.push(migration);
+            }
             // ensure that we are sorted by `VERSION ASC`
             migrations.sort_by_key(|m| m.version);
 
             Ok(migrations)
         })
-    }
-}
-
-impl TestContext {
-    pub fn new(test_name: String, pools: impl Into<HashMap<String, TestDb>>) -> Self {
-        setup_tracing_once();
-        Self {
-            test_name,
-            pools: pools.into(),
-        }
-    }
-
-    /// Call this after all holders of the [`SharedContext`] have been dropped.
-    pub async fn close(mut self) {
-        for (_, db) in self.pools.drain() {
-            db.close().await;
-        }
-    }
-}
-
-impl Drop for TestContext {
-    fn drop(&mut self) {
-        for (db_name, _) in &self.pools {
-            tracing::warn!("test context dropped without cleaning up for db: {db_name}",)
-        }
     }
 }
 

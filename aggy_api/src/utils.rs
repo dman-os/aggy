@@ -17,6 +17,7 @@ pub mod testing {
     ) -> (TestContext, crate::SharedServiceContext) {
         let testing = TestContext::new(
             test_name.into(),
+            // FIXME: build the test_dbs in parallel
             [
                 ("aggy".to_string(), test_db(test_name).await),
                 (
@@ -30,6 +31,7 @@ pub mod testing {
     }
 
     pub async fn test_db(test_name: &'static str) -> TestDb {
+        dotenvy::dotenv().ok();
         let db_name = test_name.replace("::tests::", "").replace("::", "_");
         let db_name = format!("aggy_{db_name}");
         TestDb::new(

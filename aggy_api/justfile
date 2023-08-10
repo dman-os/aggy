@@ -1,5 +1,6 @@
 set shell := ["sh", "-c"]
-set dotenv-load
+# NOTE: disabled to avoid issues with SQLx overrides
+# set dotenv-load
 
 # List the avail commands
 default:
@@ -51,5 +52,4 @@ logs-dev:
   podman-compose -f docker-compose.yml -f docker-compose.dev.yml logs -f -n -t
 
 test *ARGS:
-  cargo test --no-run # build using cargo test since nextest builds don't jive with SQLx
   cargo nextest run {{ARGS}}

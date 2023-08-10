@@ -24,6 +24,7 @@ pub mod testing {
     }
 
     pub async fn test_db(test_name: &'static str) -> TestDb {
+        dotenvy::dotenv().ok();
         let db_name = test_name.replace("::tests::", "").replace("::", "_");
         let db_name = format!("epigram_{db_name}");
         TestDb::new(

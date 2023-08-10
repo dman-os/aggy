@@ -54,7 +54,8 @@ SELECT
     ,util.multibase_encode_hex(u.pub_key) as "author_pub_key!"
     ,u.username::TEXT as "author_username!"
     ,u.pic_url as "author_pic_url"
-FROM posts.posts as p
+FROM 
+    posts.posts as p
         LEFT JOIN
     auth.users as u
         ON (p.author_id = u.id)
@@ -158,11 +159,12 @@ impl DocumentedEndpoint for GetPost {
             created_at: OffsetDateTime::now_utc(),
             updated_at: OffsetDateTime::now_utc(),
             epigram_id: "f26204069c8e8525502946fa9e7b9f51a1a3a9fb3bbd1263bf6fdc39af8572d61".into(),
-            title: "".into(),
-            url: Some("".into()),
-            author_username: "".into(),
-            author_pic_url: Some("".into()),
-            author_pub_key: "".into(),
+            title: "Earth 2 reported to begin operations next circumsolar year".into(),
+            url: Some("ipns://𝕏.com/stella_oort/48723494675897134423".into()),
+            author_username: "tazental".into(),
+            author_pic_url: None,
+            author_pub_key: "f196b70071ff6d9c6480677814ac78d2d1478a05a46c60d1dcd7afd21befb0b89"
+                .into(),
             epigram: None,
         }]
         .into_iter()

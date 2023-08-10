@@ -2,22 +2,19 @@ use crate::interlude::*;
 
 use crate::utils::*;
 
-use super::User;
+use super::Post;
 
 #[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[serde(crate = "serde", rename_all = "camelCase")]
-pub enum UserSortingField {
-    Username,
-    Email,
+pub enum PostSortingField {
     CreatedAt,
     UpdatedAt,
 }
 
-impl SortingField for UserSortingField {
+impl SortingField for PostSortingField {
+    #[inline]
     fn sql_field_name(&self) -> String {
         match self {
-            Self::Username => "username",
-            Self::Email => "email",
             Self::CreatedAt => "created_at",
             Self::UpdatedAt => "updated_at",
         }
@@ -26,15 +23,15 @@ impl SortingField for UserSortingField {
 }
 
 #[derive(Clone, Copy, Debug)]
-pub struct ListUsers;
+pub struct ListPosts;
 
-common::alias_and_ref!(ListRequest<UserSortingField>, ListUsersRequest, Request, de);
+common::alias_and_ref!(ListRequest<PostSortingField>, ListPostsRequest, Request, de);
 
 #[derive(Debug, thiserror::Error, serde::Serialize, utoipa::ToSchema)]
 #[serde(crate = "serde", tag = "error", rename_all = "camelCase")]
 pub enum Error {
-    #[error("access denied")]
-    AccessDenied,
+    // #[error("access denied")]
+    // AccessDenied,
     #[error("invalid input: {issues:?}")]
     InvalidInput {
         #[from]
@@ -44,13 +41,13 @@ pub enum Error {
     Internal { message: String },
 }
 
-crate::impl_from_auth_err!(Error);
+// crate::impl_from_auth_err!(Error);
 
-common::alias_and_ref!(ListResponse<super::User>, ListUsersResponse, Response, ser);
+common::alias_and_ref!(ListResponse<super::Post>, ListPostsResponse, Response, ser);
 
 fn validate_request(
-    request: ListRequest<UserSortingField>,
-) -> Result<(String, UserSortingField, SortingOrder, Option<String>), validator::ValidationErrors> {
+    request: ListRequest<PostSortingField>,
+) -> Result<(String, PostSortingField, SortingOrder, Option<String>), validator::ValidationErrors> {
     validator::Validate::validate(&request)?;
 
     if request.after_cursor.is_some() || request.before_cursor.is_some() {
@@ -77,7 +74,7 @@ fn validate_request(
             );
             issues
         };
-        let cursor: Cursor<serde_json::Value, UserSortingField> = cursor
+        let cursor: Cursor<serde_json::Value, PostSortingField> = cursor
             .parse()
             .map_err(|_| invalid_cursor_err("unable to decode cursor"))?;
         // let op = match (cursor.order, is_after) {
@@ -87,28 +84,32 @@ fn validate_request(
         let op = if is_after { ">" } else { "<" };
         // FIXME: sql injection, consider HMACing cursors
         let clause = match cursor.field {
-            UserSortingField::Username | UserSortingField::Email => {
-                let value = cursor
+            PostSortingField::CreatedAt | PostSortingField::UpdatedAt => {
+                let arr = cursor
                     .value
+                    .as_array()
+                    .ok_or_else(|| invalid_cursor_err("nonsensical cursor"))?;
+                let value = arr[0]
+                    .as_i64()
+                    .ok_or_else(|| invalid_cursor_err("nonsensical cursor"))?;
+                let id = arr[1]
                     .as_str()
                     .ok_or_else(|| invalid_cursor_err("nonsensical cursor"))?;
                 let column = cursor.field.sql_field_name();
-                format!("WHERE {column} {op} $guessme${value}$guessme$")
-            }
-            UserSortingField::CreatedAt | UserSortingField::UpdatedAt => {
-                let value = cursor
-                    .value
-                    .as_i64()
-                    .ok_or_else(|| invalid_cursor_err("nonsensical cursor"))?;
-                let column = cursor.field.sql_field_name();
-                format!("WHERE {column} {op} (TO_TIMESTAMP({value}) AT TIME ZONE 'UTC')")
+                format!(
+                    r#"WHERE 
+                        {column} {op} (TO_TIMESTAMP({value}) AT TIME ZONE 'UTC')
+                        AND 
+                        id {op}= $guessme${id}$guessme$::UUID
+                        "#
+                )
             }
         };
         Ok((clause, cursor.field, cursor.order, cursor.filter))
     } else {
         Ok((
             "".into(),
-            request.sorting_field.unwrap_or(UserSortingField::CreatedAt),
+            request.sorting_field.unwrap_or(PostSortingField::CreatedAt),
             request.sorting_order.unwrap_or(SortingOrder::Descending),
             request.filter,
         ))
@@ -116,25 +117,16 @@ fn validate_request(
 }
 
 #[async_trait::async_trait]
-impl crate::AuthenticatedEndpoint for ListUsers {
+impl crate::Endpoint for ListPosts {
     type Request = Request;
     type Response = Response;
     type Error = Error;
     type Cx = Context;
 
-    fn authorize_request(&self, request: &Self::Request) -> crate::auth::authorize::Request {
-        crate::auth::authorize::Request {
-            auth_token: request.auth_token.clone().unwrap(),
-            resource: crate::auth::Resource::Users,
-            action: crate::auth::Action::Read,
-        }
-    }
-
-    // #[tracing::instrument(skip(cx))]
+    #[tracing::instrument(skip(cx))]
     async fn handle(
         &self,
         cx: &Self::Cx,
-        _accessing_user: uuid::Uuid,
         Request(request): Self::Request,
     ) -> Result<Self::Response, Self::Error> {
         let crate::Db::Pg { db_pool } = &cx.db /* else {
@@ -149,20 +141,26 @@ impl crate::AuthenticatedEndpoint for ListUsers {
         let result = sqlx::query(
             format!(
                 r#"
-SELECT 
-    id
-    ,created_at
-    ,updated_at
-    ,email::TEXT as "email"
-    ,username::TEXT as "username"
-    ,'f' || encode(pub_key, 'hex') as "pub_key"
-    ,pic_url
+SELECT *
 FROM (
-    SELECT *
-    FROM auth.users
+    SELECT
+        p.created_at as "created_at"
+        ,p.updated_at as "updated_at"
+        ,p.id as "id"
+        ,p.title as "title"
+        ,p.url as "url"
+        ,util.multibase_encode_hex(p.epigram_id) as "epigram_id"
+        ,util.multibase_encode_hex(u.pub_key) as "author_pub_key"
+        ,u.username::TEXT as "author_username"
+        ,u.pic_url as "author_pic_url"
+    FROM (
+        posts.posts as p
+            LEFT JOIN
+        auth.users as u
+            ON (p.author_id = u.id)
+    ) 
     WHERE cast($1 as text) IS NULL OR (
-        username ILIKE '%%' || $1 || '%%'
-        OR email ILIKE '%%' || $1 || '%%'
+        u.username ILIKE $1
     )
     ORDER BY {sorting_field_str}, id {sorting_order_str}
     NULLS LAST
@@ -180,14 +178,12 @@ LIMIT $2 + 1
         .fetch_all(db_pool)
         .await;
         match result {
-            Err(sqlx::Error::RowNotFound) => Ok(ListUsersResponse {
+            Err(sqlx::Error::RowNotFound) => Ok(ListPostsResponse {
                 cursor: None,
                 items: vec![],
             }
             .into()),
-            Err(err) => Err(Error::Internal {
-                message: format!("db err: {err}"),
-            }),
+            Err(err) => Err(common::internal_err!("db err: {err}")),
             Ok(rows) => {
                 use sqlx::FromRow;
                 let more_rows_pending = rows.len() == limit + 1;
@@ -195,7 +191,7 @@ LIMIT $2 + 1
                 let items = rows
                     .iter()
                     .take(limit as _)
-                    .map(User::from_row)
+                    .map(Post::from_row)
                     .collect::<Result<Vec<_>, _>>()
                     .map_err(|err| Error::Internal {
                         message: format!("row mapping err: {err}"),
@@ -207,13 +203,17 @@ LIMIT $2 + 1
                             value: {
                                 let last = items.last().unwrap();
                                 match sorting_field {
-                                    UserSortingField::Username => serde_json::json!(last.username),
-                                    UserSortingField::Email => serde_json::json!(last.email),
-                                    UserSortingField::CreatedAt => {
-                                        serde_json::json!(last.created_at.unix_timestamp())
+                                    PostSortingField::CreatedAt => {
+                                        serde_json::json!([
+                                            last.created_at.unix_timestamp(),
+                                            last.id
+                                        ])
                                     }
-                                    UserSortingField::UpdatedAt => {
-                                        serde_json::json!(last.updated_at.unix_timestamp())
+                                    PostSortingField::UpdatedAt => {
+                                        serde_json::json!([
+                                            last.updated_at.unix_timestamp(),
+                                            last.id
+                                        ])
                                     }
                                 }
                             },
@@ -226,7 +226,7 @@ LIMIT $2 + 1
                 } else {
                     None
                 };
-                Ok(ListUsersResponse { cursor, items }.into())
+                Ok(ListPostsResponse { cursor, items }.into())
             }
         }
     }
@@ -237,24 +237,22 @@ impl From<&Error> for StatusCode {
         use Error::*;
         match err {
             InvalidInput { .. } => Self::BAD_REQUEST,
-            AccessDenied => Self::UNAUTHORIZED,
+            // AccessDenied => Self::UNAUTHORIZED,
             Internal { .. } => Self::INTERNAL_SERVER_ERROR,
         }
     }
 }
 
-impl HttpEndpoint for ListUsers {
+impl HttpEndpoint for ListPosts {
     const METHOD: Method = Method::Get;
-    const PATH: &'static str = "/users";
+    const PATH: &'static str = "/posts";
 
     type SharedCx = SharedContext;
-    type HttpRequest = (TypedHeader<BearerToken>, Json<Request>);
+    type HttpRequest = (Query<ListPostsRequest>, DiscardBody);
 
-    fn request(
-        (TypedHeader(token), Json(Request(request))): Self::HttpRequest,
-    ) -> Result<Self::Request, Self::Error> {
-        Ok(ListUsersRequest {
-            auth_token: Some(token),
+    fn request((Query(request), _): Self::HttpRequest) -> Result<Self::Request, Self::Error> {
+        Ok(ListPostsRequest {
+            // auth_token: Some(token),
             ..request
         }
         .into())
@@ -265,39 +263,40 @@ impl HttpEndpoint for ListUsers {
     }
 }
 
-impl DocumentedEndpoint for ListUsers {
+impl DocumentedEndpoint for ListPosts {
     const TAG: &'static crate::Tag = &super::TAG;
 
     fn success_examples() -> Vec<serde_json::Value> {
-        use crate::user::testing::*;
-        [ListUsersResponse {
+        [ListPostsResponse {
             cursor: None,
             items: vec![
-                User {
-                    id: Default::default(),
-                    created_at: time::OffsetDateTime::now_utc(),
-                    updated_at: time::OffsetDateTime::now_utc(),
-                    email: Some(USER_01_EMAIL.into()),
-                    username: USER_01_USERNAME.into(),
-                    pic_url: Some("https:://example.com/picture.jpg".into()),
-                    pub_key: common::utils::encode_hex_multibase(
-                        ed25519_dalek::SigningKey::generate(&mut rand::thread_rng())
-                            .verifying_key()
-                            .to_bytes(),
-                    ),
+                Post {
+                    id: default(),
+                    created_at: OffsetDateTime::now_utc(),
+                    updated_at: OffsetDateTime::now_utc(),
+                    epigram_id: "f26204069c8e8525502946fa9e7b9f51a1a3a9fb3bbd1263bf6fdc39af8572d61"
+                        .into(),
+                    title: "Earth 2 reported to begin operations next circumsolar year".into(),
+                    url: Some("ipns://𝕏.com/stella_oort/48723494675897134423".into()),
+                    author_username: "tazental".into(),
+                    author_pic_url: None,
+                    author_pub_key:
+                        "f196b70071ff6d9c6480677814ac78d2d1478a05a46c60d1dcd7afd21befb0b89".into(),
+                    epigram: None,
                 },
-                User {
+                Post {
                     id: Default::default(),
                     created_at: time::OffsetDateTime::now_utc(),
                     updated_at: time::OffsetDateTime::now_utc(),
-                    email: Some(USER_02_EMAIL.into()),
-                    username: USER_02_USERNAME.into(),
-                    pic_url: None,
-                    pub_key: common::utils::encode_hex_multibase(
-                        ed25519_dalek::SigningKey::generate(&mut rand::thread_rng())
-                            .verifying_key()
-                            .to_bytes(),
-                    ),
+                    epigram_id: "f26204069c8e8525502946fa9e7b9f51a1a3a9fb3bbd1263bf6fdc39af8572d61"
+                        .into(),
+                    title: "Earth 2 reported to begin operations next circumsolar year".into(),
+                    url: Some("ipns://𝕏.com/stella_oort/48723494675897134423".into()),
+                    author_username: "tazental".into(),
+                    author_pic_url: None,
+                    author_pub_key:
+                        "f196b70071ff6d9c6480677814ac78d2d1478a05a46c60d1dcd7afd21befb0b89".into(),
+                    epigram: None,
                 },
             ],
         }]
@@ -309,7 +308,7 @@ impl DocumentedEndpoint for ListUsers {
 
     fn errors() -> Vec<ErrorResponse<Error>> {
         vec![
-            ("Access denied", Error::AccessDenied),
+            // ("Access denied", Error::AccessDenied),
             (
                 "Invalid input",
                 Error::InvalidInput {
@@ -345,10 +344,10 @@ mod tests {
 
     use crate::interlude::*;
 
-    use crate::user::list::*;
+    use crate::post::list::*;
     use crate::user::testing::*;
 
-    fn fixture_request() -> ListUsersRequest {
+    fn fixture_request() -> ListPostsRequest {
         serde_json::from_value(fixture_request_json()).unwrap()
     }
 
@@ -356,16 +355,16 @@ mod tests {
         serde_json::json!({
             "limit": 25,
             "filter": USER_01_USERNAME,
-            "sortingField": "username",
+            "sortingField": "updatedAt",
             "sortingOrder": "descending"
         })
     }
 
     common::table_tests! {
-        list_users_validate,
+        list_posts_validate,
         (request, err_field),
         {
-            match crate::user::list::validate_request(request) {
+            match crate::post::list::validate_request(request) {
                 Ok(_) => {
                     if let Some(err_field) = err_field {
                         panic!("validation succeeded, was expecting err on field: {err_field}");
@@ -381,16 +380,16 @@ mod tests {
         }
     }
 
-    list_users_validate! {
+    list_posts_validate! {
         rejects_too_large_limits: (
-            ListUsersRequest {
+            ListPostsRequest {
                 limit: Some(99999),
                 ..fixture_request()
             },
             Some("limit"),
         ),
         rejects_both_cursors_at_once: (
-            ListUsersRequest {
+            ListPostsRequest {
                 before_cursor: Some("cursorstr".into()),
                 after_cursor: Some("cursorstr".into()),
                 auth_token: None,
@@ -402,7 +401,7 @@ mod tests {
             Some("__all__"),
         ),
         rejects_cursors_with_filter: (
-            ListUsersRequest {
+            ListPostsRequest {
                 after_cursor: Some("cursorstr".into()),
                 ..fixture_request()
             },
@@ -410,12 +409,11 @@ mod tests {
         ),
     }
 
-    macro_rules! list_users_integ {
+    macro_rules! list_posts_integ {
         ($(
             $name:ident: {
-                auth_token: $auth_token:expr,
+                uri: $uri:expr,
                 status: $status:expr,
-                body: $json_body:expr,
                 $(check_json: $check_json:expr,)?
                 $(extra_assertions: $extra_fn:expr,)?
             },
@@ -425,14 +423,12 @@ mod tests {
                 common::integration_table_tests! {
                     $(
                         $name: {
-                            uri: "/users",
+                            uri: $uri,
                             method: "GET",
                             status: $status,
-                            router: crate::user::router(),
+                            router: crate::post::router(),
                             cx_fn: crate::utils::testing::cx_fn,
-                            body: $json_body,
                             $(check_json: $check_json,)?
-                            auth_token: $auth_token,
                             $(extra_assertions: $extra_fn,)?
                         },
                     )*
@@ -441,40 +437,29 @@ mod tests {
         };
     }
 
-    list_users_integ! {
+    list_posts_integ! {
         works: {
-            auth_token: USER_01_SESSION.into(),
+            uri: format!("/posts?limit=2"),
             status: StatusCode::OK,
-            body: fixture_request_json().destructure_into_self(serde_json::json!({
-                "limit": 2,
-                "filter": null,
-            })),
             extra_assertions: &|EAArgs { test_cx, response_json, .. }| {
                 Box::pin(async move {
                     let cx = state_fn(test_cx);
                     let resp_body_json = response_json.unwrap();
                     assert_eq!(resp_body_json["items"].as_array().unwrap().len(), 2);
                     assert!(resp_body_json["cursor"].as_str().is_some());
-                    let app = crate::user::router().with_state(cx);
+                    let app = crate::post::router().with_state(cx);
                     let resp = app
                         .oneshot(
                             http::Request::builder()
                                 .method("GET")
-                                .uri("/users")
-                                .header(
-                                    http::header::AUTHORIZATION,
-                                    format!("Bearer {USER_01_SESSION}"),
+                                .uri(
+                                    format!(
+                                        "/posts?afterCursor={}",
+                                        resp_body_json["cursor"].as_str().unwrap()
+                                    )
                                 )
                                 .header(http::header::CONTENT_TYPE, "application/json")
-                                .body(
-                                    serde_json::to_vec(
-                                        &serde_json::json!({
-                                            "afterCursor": resp_body_json["cursor"]
-                                                                .as_str()
-                                                                .unwrap()
-                                        })
-                                    ).unwrap().into()
-                                )
+                                .body(default())
                                 .unwrap_or_log(),
                         )
                         .await

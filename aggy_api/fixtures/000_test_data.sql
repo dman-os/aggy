@@ -87,6 +87,19 @@ DO $body$
             le_user.id, 
             '$argon2i$v=19$m=4096,t=3,p=1$c29tZXNhbHQ$iWh06vD8Fy27wf9npn6FXWiCX4K6pW6Ue1Bnzz07Z8A'
         );
+        INSERT INTO posts.posts (
+            id
+            ,author_id
+            ,epigram_id
+            ,title
+            ,url
+        ) VALUES (
+            '244018b4-8081-4a93-9828-6e908591bd16'::uuid
+            ,le_user.id
+            ,'\x01e94b7091caea92f5d0f07a06efc088feaf848f44b6b65dfffa2df1357fcf7b'::bytea
+            ,'Tokyo report shows record numbers of discarded limbs infesting underways'
+            ,'nncp://857893/8471291/7583921748203.txt'
+        );
     END;
 $body$ LANGUAGE PLpgSQL;
 
@@ -114,6 +127,19 @@ DO $body$
         ) VALUES ( 
             le_user.id, 
             '$argon2i$v=19$m=4096,t=3,p=1$c29tZXNhbHQ$iWh06vD8Fy27wf9npn6FXWiCX4K6pW6Ue1Bnzz07Z8A'
+        );
+        INSERT INTO posts.posts (
+            id
+            ,author_id
+            ,epigram_id
+            ,title
+            ,url
+        ) VALUES (
+            '4829545d-a9ff-4a06-b00f-a22a6ba4c5eb'::uuid
+            ,le_user.id
+            ,'\x6a6ed2475a9d74e1a630b581617c975dd8c2a7fa1a53f3711fef9212bbb13504'::bytea
+            ,'REM sleep adware considered dangerous'
+            ,'https://nil.null/89897898-rem-adware-danger'
         );
     END;
 $body$ LANGUAGE PLpgSQL;

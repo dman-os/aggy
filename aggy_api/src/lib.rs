@@ -11,7 +11,12 @@ mod interlude {
 
     pub use std::borrow::Cow;
 
-    pub use axum::{extract::Path, http, response::IntoResponse, Json, TypedHeader};
+    pub use axum::{
+        extract::{Path, Query},
+        http,
+        response::IntoResponse,
+        Json, TypedHeader,
+    };
     pub use serde::{Deserialize, Serialize};
     pub use sqlx::FromRow;
     pub use time::format_description::well_known::Iso8601;

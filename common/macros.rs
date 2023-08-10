@@ -59,7 +59,7 @@ macro_rules! alias_and_ref {
     };
     ($aliased_type:ty, $alias_name:ident, $ref_name:ident, de) => {
         pub type $alias_name = $aliased_type;
-        #[derive(educe::Educe, serde::Deserialize)]
+        #[derive(Debug, educe::Educe, serde::Deserialize)]
         #[serde(crate = "serde")]
         #[educe(Deref)]
         pub struct $ref_name($alias_name);

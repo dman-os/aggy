@@ -3,6 +3,9 @@ name = "common"
 version.workspace = true
 edition.workspace = true
 
+[lib]
+path = "lib.rs"
+
 [dependencies]
 deps = { workspace = true }
 validator = { workspace = true }

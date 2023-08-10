@@ -118,7 +118,7 @@ where
         {
             Err(validator::ValidationError {
                 code: "both_cursor_and_sorting_or_filter".into(),
-                message: Some("both beforeCursor and afterCursor are present".into()),
+                message: Some("both beforeCursor and sorting/filter parameters present".into()),
                 params: [
                     Some((
                         if after_cursor.is_some() {
