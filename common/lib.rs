@@ -14,16 +14,17 @@ pub mod codecs;
 pub mod macros;
 pub mod utils;
 mod interlude {
+    pub use crate::utils::default;
     pub use crate::{
         AuthedUid, DocumentedEndpoint, EndpointWrapper, ErrorResponse, HttpEndpoint, Method, Ref,
     };
     pub use axum::{response::IntoResponse, TypedHeader};
     pub use deps::*;
-    pub type BearerToken = axum::headers::Authorization<axum::headers::authorization::Bearer>;
-    pub type DiscardBody = axum::extract::BodyStream;
-    pub use crate::utils::default;
 }
 use crate::interlude::*;
+
+pub type BearerToken = axum::headers::Authorization<axum::headers::authorization::Bearer>;
+pub type DiscardBody = axum::extract::BodyStream;
 
 use utils::*;
 

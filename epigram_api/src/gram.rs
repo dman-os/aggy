@@ -18,6 +18,7 @@ pub struct Gram {
     pub sig: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[sqlx(skip)]
+    #[schema(value_type = Option<Vec<Gram>>)]
     pub replies: Option<Vec<Gram>>,
 }
 

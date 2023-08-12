@@ -10,7 +10,7 @@ export class ApiClient {
   ) { }
 
   async getTopPosts() {
-    return topPosts;
+    return this.aggy.listPosts({});
   }
 }
 

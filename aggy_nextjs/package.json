@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "gen-ozc": "openapi-zod-client http://0:8080/aggy/openapi.json -o ./src/gen/types-aggy-oa.ts -t ./scripts/ozc-template.hbs"
+    "gen-ozc-aggy": "openapi-zod-client http://0:8080/aggy/openapi.json -o ./src/gen/types-aggy-oa.ts -t ./scripts/ozc-template.hbs && sed -i 's/undefined/null/g' ./src/gen/types-aggy-oa.ts",
+    "gen-ozc-epigram": "openapi-zod-client http://0:8080/epigram/openapi.json -o ./src/gen/types-epigram-oa.ts -t ./scripts/ozc-template.hbs && sed -i 's/undefined/null/g' ./src/gen/types-epigram-oa.ts",
+    "gen-ozc": "pnpm gen-ozc-aggy & pnpm gen-ozc-epigram"
   },
   "dependencies": {
     "@iconify-json/solar": "^1.1.1",

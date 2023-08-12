@@ -97,6 +97,7 @@ pub fn router(state: SharedContext) -> axum::Router {
     axum::Router::new()
         .merge(user::router())
         .merge(auth::router())
+        .merge(post::router())
         .with_state(state.clone())
         .merge(web::router().with_state(SharedServiceContext(ServiceContext(state))))
 }
@@ -122,6 +123,7 @@ impl utoipa::OpenApi for ApiDoc {
                 let builder = user::paths(builder, "/aggy"); //FIXME: make this dyamic
                 let builder = auth::paths(builder, "/aggy");
                 let builder = web::paths(builder, "/aggy");
+                let builder = post::paths(builder, "/aggy");
                 builder.build()
             })
             .components(Some({
@@ -142,12 +144,14 @@ impl utoipa::OpenApi for ApiDoc {
                 let builder = user::components(builder);
                 let builder = auth::components(builder);
                 let builder = web::components(builder);
+                let builder = post::components(builder);
                 builder.build()
             }))
             .tags(Some([
                 auth::TAG.into(),
                 user::TAG.into(),
                 web::TAG.into(),
+                post::TAG.into(),
                 common::DEFAULT_TAG.into(),
             ]))
             .build();

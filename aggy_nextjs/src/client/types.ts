@@ -45,6 +45,11 @@ export const validators = {
       id: zod.string(),
     })
   ),
+  post: oa.Post.merge(
+    zod.object({
+    })
+  ),
+  gram: oa.Gram,
 
   createSessionBody: oa.CreateWebSession_Body.merge(
     zod.object({
@@ -70,13 +75,26 @@ export const validators = {
       userId: zod.string(),
     })
   ),
+
+  listPostsQuery: zod.object({
+    limit: oa.endpoints.ListPosts.parameters.limit.schema,
+    afterCursor: oa.endpoints.ListPosts.parameters.afterCursor.schema,
+    beforeCursor: oa.endpoints.ListPosts.parameters.beforeCursor.schema,
+    filter: oa.endpoints.ListPosts.parameters.filter.schema,
+    sortingField: oa.endpoints.ListPosts.parameters.sortingField.schema,
+    sortingOrder: oa.endpoints.ListPosts.parameters.sortingOrder.schema,
+  }),
+  listPostsResponse: oa.endpoints.ListPosts.response
 }
 
-export type User = typeof validators.user._type;
-export type Session = typeof validators.session._type;
+export type User = zod.infer<typeof validators.user>;
+export type Session = zod.infer<typeof validators.session>;
+export type Post = zod.infer<typeof validators.post>;
+export type Gram = zod.infer<typeof validators.gram>;
 
-export type CreateUserBody = typeof validators.createUserBody._type;
-export type CreateSessionBody = typeof validators.createSessionBody._type;
-export type AuthenticateBody = typeof validators.authenticateBody._type;
-export type AuthenticateResponse = typeof validators.authenticateResponse._type;
-export type UpdateSessionBody = typeof validators.updateSessionBody._type;
+export type CreateUserBody = zod.infer<typeof validators.createUserBody>;
+export type CreateSessionBody = zod.infer<typeof validators.createSessionBody>;
+export type AuthenticateBody = zod.infer<typeof validators.authenticateBody>;
+export type AuthenticateResponse = zod.infer<typeof validators.authenticateResponse>;
+export type UpdateSessionBody = zod.infer<typeof validators.updateSessionBody>;
+export type ListPostsQuery = zod.infer<typeof validators.listPostsQuery>;

@@ -1,4 +1,4 @@
-import { cookies } from 'next/headers'
+import { cookies, headers } from 'next/headers'
 import * as jose from "jose";
 import * as zod from "zod";
 
@@ -21,73 +21,76 @@ export class SessionStore {
     public aggy: AggyClient
   ) { }
 
-  private async readSession() {
-    const cookieStore = cookies();
-    const jwt = cookieStore.get(SESSION_COOKIE)?.value;
-    if (!jwt) {
-      return;
-    }
-    const payload = jwtPayloadValidator.parse(
-      (await jose.jwtVerify(jwt, SESSION_SECRET)).payload
-    )
-    this.sessionCache = {
-      id: payload.sid
-    }
+  private async newSession() {
+    const hdrs = headers();
+    const input: T.CreateSessionBody = {
+      userAgent: userAgent({ headers: hdrs }).ua,
+      ipAddr: hdrs.get('x-forwarded-for')!,
+    };
+    return await this.aggy.createSession(input);
   }
 
   async id() {
     let session = this.sessionCache;
     if (!session) {
-      await this.readSession();
-      session = this.sessionCache!;
+      session = await readCookieSession();
+      // if nothing in the cookie, create a new one
+      if (!session) {
+        const fullSession = await this.newSession();
+        await addCookieSession(fullSession);
+        session = fullSession;
+      }
     }
+    this.sessionCache = session;
     return session.id;
   }
 
   async load() {
     let session = this.sessionCache;
     if (!session) {
-      await this.readSession();
+      await this.id(); // use `id` to read/init session
       session = this.sessionCache!;
-    }
-    if (!("expiresAt" in session)) {
-      this.sessionCache = await this.aggy.getSession(session.id)!;
-      session = this.sessionCache!;
-    }
-    return session as T.Session;
-  }
-
-  async add(request: NextRequest, response: NextResponse) {
-    if (request.cookies.has(SESSION_COOKIE)) {
-      return
-    }
-    const input: T.CreateSessionBody = {
-      userAgent: userAgent({ headers: request.headers }).ua,
-      ipAddr: request.headers.get('x-forwarded-for')!,
-    };
-    const resp = await this.aggy.createSession(input);
-    const jwt = await new jose.SignJWT({
-      sid: resp.id,
-    })
-      .setProtectedHeader({ alg: 'HS256' })
-      .setExpirationTime(new Date(resp.expiresAt).valueOf())
-      .setIssuer('aggy_nextjs')
-      .sign(SESSION_SECRET);
-    response.cookies.set(
-      {
-        name: SESSION_COOKIE,
-        value: jwt,
-        secure: process.env.NODE_ENV === 'production',
-        httpOnly: true,
-        expires: new Date(resp.expiresAt),
-        sameSite: "strict",
-        path: '/'
+      // if it only read the session id, fetch the full body
+      if (!("expiresAt" in session)) {
+        session = await this.aggy.getSession(session.id)!;
       }
-    );
+    }
+    this.sessionCache = session;
+    return session as T.Session;
   }
 }
 
-export async function addSessionMiddleware(request: NextRequest, response: NextResponse) {
-  const { session } = apiClient()
-  await session.add(request, response);
+async function addCookieSession(session: T.Session) {
+  const jwt = await new jose.SignJWT({
+    sid: session.id,
+  })
+    .setProtectedHeader({ alg: 'HS256' })
+    .setExpirationTime(new Date(session.expiresAt).valueOf())
+    .setIssuer('aggy_nextjs')
+    .sign(SESSION_SECRET);
+  cookies().set(
+    {
+      name: SESSION_COOKIE,
+      value: jwt,
+      secure: process.env.NODE_ENV === 'production',
+      httpOnly: true,
+      expires: new Date(session.expiresAt),
+      sameSite: "strict",
+      path: '/'
+    }
+  );
+}
+
+async function readCookieSession() {
+  const cookieStore = cookies();
+  const jwt = cookieStore.get(SESSION_COOKIE)?.value;
+  if (!jwt) {
+    return;
+  }
+  const payload = jwtPayloadValidator.parse(
+    (await jose.jwtVerify(jwt, SESSION_SECRET)).payload
+  )
+  return {
+    id: payload.sid
+  }
 }

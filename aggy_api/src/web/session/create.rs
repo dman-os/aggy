@@ -84,8 +84,8 @@ WITH webs as (
     ,   ip_addr as "ip_addr!: std::net::IpAddr"
     ,   user_agent as "user_agent!"
     ,   auths.expires_at as "token_expires_at?"
-    ,   token
-    ,   user_id
+    ,   token as "token?"
+    ,   user_id as "user_id?"
     FROM (
         webs
             LEFT JOIN
@@ -291,6 +291,44 @@ mod tests {
             auth_token: SERVICE_SECRET.into(),
             status: http::StatusCode::CREATED,
             check_json: fixture_request_json().remove_keys_from_obj(&["authSessionId"]),
+            extra_assertions: &|EAArgs { test_cx, response_json, .. }| {
+                Box::pin(async move {
+                    let cx = state_fn_service(test_cx);
+                    let req_body_json = fixture_request_json()
+                        .remove_keys_from_obj(&["authSessionId"]);
+                    let resp_body_json = response_json.unwrap();
+
+                    let app = crate::web::router().with_state(cx);
+                    let resp = app
+                        .oneshot(
+                            http::Request::builder()
+                                .method("GET")
+                                .uri(
+                                    format!(
+                                        "/web/sessions/{}",
+                                        resp_body_json["id"].as_str().unwrap()
+                                    )
+                                )
+                                .header(
+                                    http::header::AUTHORIZATION,
+                                    format!("Bearer {SERVICE_SECRET}"),
+                                )
+                                .body(Default::default())
+                                .unwrap_or_log(),
+                        )
+                        .await
+                        .unwrap_or_log();
+
+                    let (head, body) = resp.into_parts();
+                    let body = hyper::body::to_bytes(body).await.unwrap_or_log();
+                    let body: serde_json::Value = serde_json::from_slice(&body).unwrap_or_log();
+                    assert_eq!(head.status, StatusCode::OK, "{head:?} {body:?}");
+                    check_json(
+                        ("expected", &req_body_json),
+                        ("response", &body),
+                    );
+                })
+            },
         },
         fails_if_auth_session_not_found: {
             body: fixture_request_json().destructure_into_self(

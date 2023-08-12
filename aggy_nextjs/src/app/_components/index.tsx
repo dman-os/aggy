@@ -5,17 +5,17 @@ import Link from 'next/link';
 import * as T from "@/client/types";
 import * as Actions from "@/app/api/actions";
 
-export function PostStatusLines({ post, csrfToken }: { post: T.AggyPost, csrfToken: string, }) {
+export function PostStatusLines({ post, csrfToken }: { post: T.Post, csrfToken: string, }) {
   return <div className="postStatusLines">
     <div className="postStatusDetailsLine flex gap-1">
       <span>
-        by <Link href={`/user/${post.epigram.author.pkey}`}>{post.epigram.author.alias}</Link>
+        by <Link href={`/user/${post.authorPubKey}`}>{post.authorUsername}</Link>
       </span>
       |
-      <a href={`/p/${post.id}`}>{post.commentCount} comments</a>
+      <a href={`/p/${post.id}`}>X comments</a>
     </div>
     <div className="postStatusFacesLine flex gap-1">
-      {Object.entries(post.epigram.topFaces).map(([rxn, { count, userFacedAt: userFacedAtTs }]) =>
+      {Object.entries({ 'b': { count: 1, userFacedAt: null } }).map(([rxn, { count, userFacedAt: userFacedAtTs }]) =>
         <form
           key={post.id}
           className="inline-block"
@@ -26,7 +26,7 @@ export function PostStatusLines({ post, csrfToken }: { post: T.AggyPost, csrfTok
           }
         >
           <input type="hidden" name="csrf_token" value={csrfToken} />
-          <input name="epigramId" type="hidden" value={post.epigram.id} />
+          <input name="epigramId" type="hidden" value={post.epigramId} />
           <input name="rxn" type="hidden" value={rxn} />
           <button
             type="submit"

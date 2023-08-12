@@ -25,7 +25,7 @@ impl SortingField for PostSortingField {
 #[derive(Clone, Copy, Debug)]
 pub struct ListPosts;
 
-common::alias_and_ref!(ListRequest<PostSortingField>, ListPostsRequest, Request, de);
+common::list_request!(PostSortingField);
 
 #[derive(Debug, thiserror::Error, serde::Serialize, utoipa::ToSchema)]
 #[serde(crate = "serde", tag = "error", rename_all = "camelCase")]
@@ -41,12 +41,10 @@ pub enum Error {
     Internal { message: String },
 }
 
-// crate::impl_from_auth_err!(Error);
-
-common::alias_and_ref!(ListResponse<super::Post>, ListPostsResponse, Response, ser);
+common::list_response!(Post);
 
 fn validate_request(
-    request: ListRequest<PostSortingField>,
+    request: Request,
 ) -> Result<(String, PostSortingField, SortingOrder, Option<String>), validator::ValidationErrors> {
     validator::Validate::validate(&request)?;
 
@@ -127,7 +125,7 @@ impl crate::Endpoint for ListPosts {
     async fn handle(
         &self,
         cx: &Self::Cx,
-        Request(request): Self::Request,
+        request: Self::Request,
     ) -> Result<Self::Response, Self::Error> {
         let crate::Db::Pg { db_pool } = &cx.db /* else {
             return Err(Error::Internal{message: "this endpoint is not implemented for this db".to_string()});
@@ -178,7 +176,7 @@ LIMIT $2 + 1
         .fetch_all(db_pool)
         .await;
         match result {
-            Err(sqlx::Error::RowNotFound) => Ok(ListPostsResponse {
+            Err(sqlx::Error::RowNotFound) => Ok(Response {
                 cursor: None,
                 items: vec![],
             }
@@ -226,7 +224,7 @@ LIMIT $2 + 1
                 } else {
                     None
                 };
-                Ok(ListPostsResponse { cursor, items }.into())
+                Ok(Response { cursor, items }.into())
             }
         }
     }
@@ -248,17 +246,17 @@ impl HttpEndpoint for ListPosts {
     const PATH: &'static str = "/posts";
 
     type SharedCx = SharedContext;
-    type HttpRequest = (Query<ListPostsRequest>, DiscardBody);
+    type HttpRequest = (Query<Request>, DiscardBody);
 
     fn request((Query(request), _): Self::HttpRequest) -> Result<Self::Request, Self::Error> {
-        Ok(ListPostsRequest {
+        Ok(Request {
             // auth_token: Some(token),
             ..request
         }
         .into())
     }
 
-    fn response(Response(resp): Self::Response) -> HttpResponse {
+    fn response(resp: Self::Response) -> HttpResponse {
         Json(resp).into_response()
     }
 }
@@ -267,7 +265,7 @@ impl DocumentedEndpoint for ListPosts {
     const TAG: &'static crate::Tag = &super::TAG;
 
     fn success_examples() -> Vec<serde_json::Value> {
-        [ListPostsResponse {
+        [Response {
             cursor: None,
             items: vec![
                 Post {
@@ -347,7 +345,7 @@ mod tests {
     use crate::post::list::*;
     use crate::user::testing::*;
 
-    fn fixture_request() -> ListPostsRequest {
+    fn fixture_request() -> Request {
         serde_json::from_value(fixture_request_json()).unwrap()
     }
 
@@ -382,14 +380,14 @@ mod tests {
 
     list_posts_validate! {
         rejects_too_large_limits: (
-            ListPostsRequest {
+            Request {
                 limit: Some(99999),
                 ..fixture_request()
             },
             Some("limit"),
         ),
         rejects_both_cursors_at_once: (
-            ListPostsRequest {
+            Request {
                 before_cursor: Some("cursorstr".into()),
                 after_cursor: Some("cursorstr".into()),
                 auth_token: None,
@@ -401,7 +399,7 @@ mod tests {
             Some("__all__"),
         ),
         rejects_cursors_with_filter: (
-            ListPostsRequest {
+            Request {
                 after_cursor: Some("cursorstr".into()),
                 ..fixture_request()
             },

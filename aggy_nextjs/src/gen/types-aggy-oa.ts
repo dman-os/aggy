@@ -1,9 +1,20 @@
 import { z } from "zod";
 
+export type Gram = {
+  id: string;
+  createdAt: string;
+  content: string;
+  coty: string;
+  parentId?: string | null;
+  authorPubkey: string;
+  authorAlias?: string | null;
+  sig: string;
+  replies?: Array<Gram> | null;
+};
 export type ValidationErrors = {};
 export type ValidationError = {
   code: string;
-  message?: string | undefined;
+  message?: string | null;
   params: {};
 };
 export type ValidationErrorsKind =
@@ -18,16 +29,78 @@ export const AuthenticateError = z.discriminatedUnion("error", [
   z.object({ error: z.literal("credentialsRejected") }).passthrough(),
   z.object({ message: z.string(), error: z.literal("internal") }).passthrough(),
 ]);
+export const PostSortingField = z.enum(["createdAt", "updatedAt"]);
+export const sortingField = PostSortingField.nullish();
+export const SortingOrder = z.enum(["ascending", "descending"]);
+export const sortingOrder = SortingOrder.nullish();
+export const Gram: z.ZodType<Gram> = z.lazy(() =>
+  z
+    .object({
+      id: z.string(),
+      createdAt: z.string().datetime({ offset: true }),
+      content: z.string(),
+      coty: z.string(),
+      parentId: z.string().nullish(),
+      authorPubkey: z.string(),
+      authorAlias: z.string().nullish(),
+      sig: z.string(),
+      replies: z.array(Gram).nullish(),
+    })
+    .passthrough()
+);
+export const Post = z
+  .object({
+    id: z.string().uuid(),
+    createdAt: z.string().datetime({ offset: true }),
+    updatedAt: z.string().datetime({ offset: true }),
+    epigramId: z.string(),
+    title: z.string(),
+    url: z.string().nullish(),
+    authorUsername: z.string(),
+    authorPicUrl: z.string().nullish(),
+    authorPubKey: z.string(),
+    epigram: Gram.nullish(),
+  })
+  .passthrough();
+export const ValidationError = z
+  .object({
+    code: z.string(),
+    message: z.string().nullish(),
+    params: z.record(z.object({}).partial().passthrough()),
+  })
+  .passthrough();
+export const ValidationErrorsKind: z.ZodType<ValidationErrorsKind> = z.lazy(
+  () =>
+    z.union([
+      ValidationErrors,
+      z.record(ValidationErrors),
+      z.array(ValidationError),
+    ])
+);
+export const ValidationErrors: z.ZodType<ValidationErrors> = z.lazy(() =>
+  z.record(ValidationErrorsKind)
+);
+export const ListPostsError = z.discriminatedUnion("error", [
+  z
+    .object({ issues: ValidationErrors, error: z.literal("invalidInput") })
+    .passthrough(),
+  z.object({ message: z.string(), error: z.literal("internal") }).passthrough(),
+]);
+export const GetPostError = z.discriminatedUnion("error", [
+  z
+    .object({ id: z.string().uuid(), error: z.literal("notFound") })
+    .passthrough(),
+  z.object({ message: z.string(), error: z.literal("internal") }).passthrough(),
+]);
 export const UserSortingField = z.enum([
   "username",
   "email",
   "createdAt",
   "updatedAt",
 ]);
-export const SortingOrder = z.enum(["ascending", "descending"]);
 export const ListUsersRequest = z
   .object({
-    limit: z.number().int().gte(0).nullable(),
+    limit: z.number().int().gte(1).lte(100).nullable(),
     afterCursor: z.string().nullable(),
     beforeCursor: z.string().nullable(),
     filter: z.string().nullable(),
@@ -50,24 +123,6 @@ export const User = z
 export const ListUsersResponse = z
   .object({ cursor: z.string().nullish(), items: z.array(User) })
   .passthrough();
-export const ValidationError = z
-  .object({
-    code: z.string(),
-    message: z.string().nullish(),
-    params: z.record(z.object({}).partial().passthrough()),
-  })
-  .passthrough();
-export const ValidationErrorsKind: z.ZodType<ValidationErrorsKind> = z.lazy(
-  () =>
-    z.union([
-      ValidationErrors,
-      z.record(ValidationErrors),
-      z.array(ValidationError),
-    ])
-);
-export const ValidationErrors: z.ZodType<ValidationErrors> = z.lazy(() =>
-  z.record(ValidationErrorsKind)
-);
 export const ListUsersError = z.discriminatedUnion("error", [
   z.object({ error: z.literal("accessDenied") }).passthrough(),
   z
@@ -102,10 +157,6 @@ export const GetUserError = z.discriminatedUnion("error", [
   z
     .object({ id: z.string().uuid(), error: z.literal("notFound") })
     .passthrough(),
-  z.object({ error: z.literal("accessDenied") }).passthrough(),
-  z.object({ message: z.string(), error: z.literal("internal") }).passthrough(),
-]);
-export const DeleteUserError = z.discriminatedUnion("error", [
   z.object({ error: z.literal("accessDenied") }).passthrough(),
   z.object({ message: z.string(), error: z.literal("internal") }).passthrough(),
 ]);
@@ -217,6 +268,91 @@ export const endpoints = {
       },
     ],
   },
+  ListPosts: {
+    method: "get",
+    path: "/aggy/posts",
+    parameters: {
+      authToken: {
+        name: "authToken",
+        type: "Query",
+        schema: z.string().nullish(),
+      },
+      limit: {
+        name: "limit",
+        type: "Query",
+        schema: z.number().int().gte(1).lte(100).nullish(),
+      },
+      afterCursor: {
+        name: "afterCursor",
+        type: "Query",
+        schema: z.string().nullish(),
+      },
+      beforeCursor: {
+        name: "beforeCursor",
+        type: "Query",
+        schema: z.string().nullish(),
+      },
+      filter: {
+        name: "filter",
+        type: "Query",
+        schema: z.string().nullish(),
+      },
+      sortingField: {
+        name: "sortingField",
+        type: "Query",
+        schema: sortingField,
+      },
+      sortingOrder: {
+        name: "sortingOrder",
+        type: "Query",
+        schema: sortingOrder,
+      },
+    },
+    response: z
+      .object({ cursor: z.string().nullish(), items: z.array(Post) })
+      .passthrough(),
+    errors: [
+      {
+        status: 400,
+        description: `Invalid input`,
+        schema: ListPostsError,
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: ListPostsError,
+      },
+    ],
+  },
+  GetPost: {
+    method: "get",
+    path: "/aggy/posts/:id",
+    parameters: {
+      includeReplies: {
+        name: "includeReplies",
+        type: "Query",
+        schema: z.boolean().optional(),
+      },
+      id: {
+        name: "id",
+        type: "Path",
+        schema: z.string().uuid(),
+      },
+    },
+    response: Post,
+    errors: [
+      {
+        status: 404,
+        description: `Not Found`,
+        schema: GetPostError,
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: GetPostError,
+      },
+    ],
+  },
   ListUsers: {
     method: "get",
     path: "/aggy/users",
@@ -260,7 +396,7 @@ export const endpoints = {
     errors: [
       {
         status: 400,
-        description: `Username occupied | Email occupied | Invalid input`,
+        description: `Invalid input | Username occupied | Email occupied`,
         schema: CreateUserError,
       },
       {
@@ -299,30 +435,6 @@ export const endpoints = {
       },
     ],
   },
-  DeleteUser: {
-    method: "delete",
-    path: "/aggy/users/:id",
-    parameters: {
-      id: {
-        name: "id",
-        type: "Path",
-        schema: z.string().uuid(),
-      },
-    },
-    response: z.void(),
-    errors: [
-      {
-        status: 401,
-        description: `Access denied`,
-        schema: DeleteUserError,
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: DeleteUserError,
-      },
-    ],
-  },
   UpdateUser: {
     method: "patch",
     path: "/aggy/users/:id",
@@ -342,7 +454,7 @@ export const endpoints = {
     errors: [
       {
         status: 400,
-        description: `Invalid input | Email occupied | Username occupied`,
+        description: `Email occupied | Username occupied | Invalid input`,
         schema: UpdateUserError,
       },
       {

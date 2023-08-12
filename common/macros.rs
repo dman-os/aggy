@@ -12,6 +12,52 @@ macro_rules! internal_err {
     }
 }
 
+#[macro_export]
+macro_rules! list_request {
+    ($sorting_field:ty) => {
+        #[derive(
+            Debug, serde::Serialize, serde::Deserialize, validator::Validate, utoipa::IntoParams,
+        )]
+        #[serde(crate = "serde", rename_all = "camelCase")]
+        #[validate(schema(function = "validate_list_req"))]
+        pub struct Request {
+            #[serde(skip)]
+            #[param(value_type = Option<String>)]
+            pub auth_token: Option<$crate::BearerToken>,
+            #[validate(range(min = 1, max = 100))]
+            #[param(minimum = 1, maximum = 100)]
+            pub limit: Option<usize>,
+            pub after_cursor: Option<String>,
+            pub before_cursor: Option<String>,
+            pub filter: Option<String>,
+            pub sorting_field: Option<$sorting_field>,
+            #[param(value_type = Option<SortingOrder>)]
+            pub sorting_order: Option<$crate::utils::SortingOrder>,
+        }
+
+        fn validate_list_req(req: &Request) -> Result<(), validator::ValidationError> {
+            $crate::utils::validate_list_req(
+                req.after_cursor.as_ref().map(|s| &s[..]),
+                req.before_cursor.as_ref().map(|s| &s[..]),
+                req.filter.as_ref().map(|s| &s[..]),
+                req.sorting_field,
+                req.sorting_order,
+            )
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! list_response {
+    ($item_ty:ty) => {
+        #[derive(serde::Serialize, utoipa::ToSchema)]
+        #[serde(crate = "serde", rename_all = "camelCase")]
+        pub struct Response {
+            pub cursor: Option<String>,
+            pub items: Vec<$item_ty>,
+        }
+    };
+}
 /// TODO: DRY me up
 /// This assumues utoipa is in scope
 #[macro_export]

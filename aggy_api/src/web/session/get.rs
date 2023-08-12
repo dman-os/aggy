@@ -66,8 +66,8 @@ SELECT
 ,   ip_addr as "ip_addr!: std::net::IpAddr"
 ,   user_agent as "user_agent!"
 ,   auths.expires_at as "token_expires_at?"
-,   token
-,   user_id
+,   token as "token?"
+,   user_id as "user_id?"
 FROM (
     web.sessions webs
         LEFT JOIN
@@ -83,9 +83,7 @@ WHERE webs.id = $1
                 .await
                 .map_err(|err| match &err {
                     sqlx::Error::RowNotFound => Error::NotFound { id: request.id },
-                    _ => Error::Internal {
-                        message: format!("db error: {err}"),
-                    },
+                    _ => common::internal_err!("db error: {err}"),
                 })?
             }
         };

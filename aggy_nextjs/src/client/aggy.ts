@@ -96,6 +96,7 @@ export class AggyClient {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${this.serviceSecret}`,
         },
+        // cache: "only-if-cached"
       }
     );
     if (!response.ok) {
@@ -103,6 +104,56 @@ export class AggyClient {
     }
     const body = await response.json();
     return zodMustParse(T.validators.session, body);
+  }
+
+  async listPosts(uncleanInput: T.ListPostsQuery) {
+    const input = T.validators.listPostsQuery.parse(uncleanInput);
+    const url = new URL(`${this.baseUrl}/posts`);
+    for (const key in input) {
+      const typedKey = key as keyof T.ListPostsQuery;
+      if (input.hasOwnProperty(key) && input[typedKey]) {
+        url.searchParams.set(key, input[typedKey]!.toString());
+      }
+    }
+    const response = await fetch(
+      url,
+      {
+        method: "GET",
+        headers: {
+          // "Content-Type": "application/json",
+          "Authorization": `Bearer ${this.serviceSecret}`,
+        },
+        // body: JSON.stringify(input),
+      }
+    );
+    if (!response.ok) {
+      throw await AggyApiError.fromResponse(response);
+    }
+    const body = await response.json();
+    return zodMustParse(T.validators.listPostsResponse, body);
+  }
+
+  async getPost(id: String) {
+    const response = await fetch(
+      `${this.baseUrl}/posts/${id}?includeReplies=true`,
+      {
+        method: "GET",
+        headers: {
+          // "Content-Type": "application/json",
+          "Authorization": `Bearer ${this.serviceSecret}`,
+        },
+        // body: JSON.stringify(input),
+      }
+    );
+    if (!response.ok) {
+      const err = await AggyApiError.fromResponse(response);
+      if (err instanceof AggyApiError && err.status === 404 && err.code == "notFound") {
+        return undefined;
+      }
+      throw err;
+    }
+    const body = await response.json();
+    return zodMustParse(T.validators.post, body);
   }
 }
 
@@ -112,7 +163,7 @@ export class AggyApiError extends Error {
     public code: string,
     public bodyJson: object,
   ) {
-    super(`AggyApiError: ${status} - ${code}`)
+    super(`AggyApiError: ${status} - ${code}` + (bodyJson as any)["message"] ?? "")
   }
 
   static async fromResponse(response: Response) {

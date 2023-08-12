@@ -20,6 +20,7 @@ pub struct Post {
 
     #[serde(skip_serializing_if = "Option::is_none")]
     #[sqlx(skip)]
+    #[schema(value_type = Option<Gram>)]
     pub epigram: Option<epigram_api::gram::Gram>,
 }
 
@@ -51,15 +52,15 @@ pub fn components(
     let builder = get::GetPost::components(builder);
     // let builder = create::CreatePost::components(builder);
     // let builder = update::UpdatePost::components(builder);
-    // let builder = list::ListPosts::components(builder);
+    let builder = list::ListPosts::components(builder);
     // let builder = delete::DeletePost::components(builder);
-    builder
-        .schemas_from_iter([
-            <Post as utoipa::ToSchema>::schema(),
-            <PostSortingField as utoipa::ToSchema>::schema(),
-        ])
-        .schemas_from_iter(<list::ListPostsRequest as utoipa::ToSchema>::aliases())
-        .schemas_from_iter(<list::ListPostsResponse as utoipa::ToSchema>::aliases())
+    builder.schemas_from_iter([
+        <Post as utoipa::ToSchema>::schema(),
+        <epigram_api::gram::Gram as utoipa::ToSchema>::schema(),
+        <PostSortingField as utoipa::ToSchema>::schema(),
+    ])
+    // .schemas_from_iter(<list::ListPostsRequest as utoipa::ToSchema>::aliases())
+    // .schemas_from_iter(<list::ListPostsResponse as utoipa::ToSchema>::aliases())
 }
 
 pub fn paths(
