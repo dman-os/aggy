@@ -1,11 +1,13 @@
-import { cookies, headers } from 'next/headers'
+import { cookies, } from 'next/headers'
 import * as jose from "jose";
 import * as zod from "zod";
+import { userAgent, NextRequest, NextResponse } from 'next/server';
 
-import { AggyClient, T } from "@/client";
+import { AggyClient, T, AggyApiError, } from "@/client";
+import { apiClient } from "@/client/index.server";
 import { assertNotNull, } from '.';
-import { apiClient } from '@/client/index.server';
-import { NextRequest, NextResponse, userAgent } from 'next/server';
+import { ResponseCookies } from 'next/dist/compiled/@edge-runtime/cookies';
+import { redirect } from 'next/navigation';
 
 const SESSION_SECRET = new TextEncoder().encode(assertNotNull(process.env.SESSION_SECRET));
 const SESSION_COOKIE = 'AGGY_session';
@@ -21,13 +23,16 @@ export class SessionStore {
     public aggy: AggyClient
   ) { }
 
-  private async newSession() {
-    const hdrs = headers();
+  async add(request: NextRequest, response: NextResponse) {
+    if (request.cookies.has(SESSION_COOKIE)) {
+      return;
+    }
     const input: T.CreateSessionBody = {
-      userAgent: userAgent({ headers: hdrs }).ua,
-      ipAddr: hdrs.get('x-forwarded-for')!,
+      userAgent: userAgent({ headers: request.headers }).ua,
+      ipAddr: request.headers.get('x-forwarded-for')!,
     };
-    return await this.aggy.createSession(input);
+    const session = await this.aggy.createSession(input);
+    await addCookieSession(response.cookies, session);
   }
 
   async id() {
@@ -36,9 +41,12 @@ export class SessionStore {
       session = await readCookieSession();
       // if nothing in the cookie, create a new one
       if (!session) {
-        const fullSession = await this.newSession();
-        await addCookieSession(fullSession);
-        session = fullSession;
+        redirect("")
+        // redirect to a cookie adding call
+        throw Error("todo");
+        // const fullSession = await this.newSession();
+        // await addCookieSession(fullSession);
+        // session = fullSession;
       }
     }
     this.sessionCache = session;
@@ -52,7 +60,19 @@ export class SessionStore {
       session = this.sessionCache!;
       // if it only read the session id, fetch the full body
       if (!("expiresAt" in session)) {
-        session = await this.aggy.getSession(session.id)!;
+        try {
+          session = await this.aggy.getSession(session.id)!;
+        } catch (err) {
+          if (err instanceof AggyApiError && err.code == "notFound") {
+            // redirect to a cookie adding call
+            throw err;
+            // const fullSession = await this.newSession();
+            // await addCookieSession(fullSession);
+            // session = fullSession;
+          } else {
+            throw err;
+          }
+        }
       }
     }
     this.sessionCache = session;
@@ -60,7 +80,7 @@ export class SessionStore {
   }
 }
 
-async function addCookieSession(session: T.Session) {
+async function addCookieSession(cookies: ResponseCookies, session: T.Session) {
   const jwt = await new jose.SignJWT({
     sid: session.id,
   })
@@ -68,7 +88,7 @@ async function addCookieSession(session: T.Session) {
     .setExpirationTime(new Date(session.expiresAt).valueOf())
     .setIssuer('aggy_nextjs')
     .sign(SESSION_SECRET);
-  cookies().set(
+  cookies.set(
     {
       name: SESSION_COOKIE,
       value: jwt,
@@ -91,6 +111,11 @@ async function readCookieSession() {
     (await jose.jwtVerify(jwt, SESSION_SECRET)).payload
   )
   return {
-    id: payload.sid
+    id: payload.sid as string
   }
+}
+
+export async function addSessionMiddleware(request: NextRequest, response: NextResponse) {
+  const { session } = apiClient();
+  await session.add(request, response);
 }

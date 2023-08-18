@@ -34,6 +34,8 @@ export const MAX_LENGTH_USERNAME = assertNotNull(oa.CreateUser_Body.shape.userna
 export const MIN_LENGTH_PASSWORD = assertNotNull(oa.CreateUser_Body.shape.password.minLength);
 export const MAX_LENGTH_PASSWORD = assertNotNull(oa.CreateUser_Body.shape.password.maxLength);
 
+export const MAX_LENGTH_TITLE = assertNotNull(oa.CreatePost_Body.shape.title.maxLength);
+
 export const validators = {
   createUserBody: oa.CreateUser_Body.merge(
     zod.object({
@@ -84,7 +86,14 @@ export const validators = {
     sortingField: oa.endpoints.ListPosts.parameters.sortingField.schema,
     sortingOrder: oa.endpoints.ListPosts.parameters.sortingOrder.schema,
   }),
-  listPostsResponse: oa.endpoints.ListPosts.response
+  listPostsResponse: oa.endpoints.ListPosts.response,
+  createPostBody: oa.CreatePost_Body.merge(
+    zod.object({
+      url: zod.string().url().nullish()
+    })
+  ).refine(obj => obj.url || obj.body, {
+    message: "Either url or body must be present."
+  }),
 }
 
 export type User = zod.infer<typeof validators.user>;
@@ -98,3 +107,4 @@ export type AuthenticateBody = zod.infer<typeof validators.authenticateBody>;
 export type AuthenticateResponse = zod.infer<typeof validators.authenticateResponse>;
 export type UpdateSessionBody = zod.infer<typeof validators.updateSessionBody>;
 export type ListPostsQuery = zod.infer<typeof validators.listPostsQuery>;
+export type CreatePostBody = zod.infer<typeof validators.createPostBody>;
