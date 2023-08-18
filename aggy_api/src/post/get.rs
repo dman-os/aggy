@@ -50,6 +50,7 @@ SELECT
     ,p.id as "id"
     ,p.title as "title"
     ,p.url as "url"
+    ,p.body as "body"
     ,util.multibase_encode_hex(p.epigram_id) as "epigram_id!"
     ,util.multibase_encode_hex(u.pub_key) as "author_pub_key!"
     ,u.username::TEXT as "author_username!"
@@ -99,6 +100,7 @@ WHERE p.id = $1::UUID
                     epigram_id: row.epigram_id,
                     title: row.title,
                     url: row.url,
+                    body: row.body,
                     author_username: row.author_username,
                     author_pub_key: row.author_pub_key,
                     author_pic_url: row.author_pic_url,
@@ -161,6 +163,7 @@ impl DocumentedEndpoint for GetPost {
             epigram_id: "f26204069c8e8525502946fa9e7b9f51a1a3a9fb3bbd1263bf6fdc39af8572d61".into(),
             title: "Earth 2 reported to begin operations next circumsolar year".into(),
             url: Some("ipns://𝕏.com/stella_oort/48723494675897134423".into()),
+            body: Some("Please sign in to see this xeet.".into()),
             author_username: "tazental".into(),
             author_pic_url: None,
             author_pub_key: "f196b70071ff6d9c6480677814ac78d2d1478a05a46c60d1dcd7afd21befb0b89"

@@ -1,5 +1,55 @@
+use crate::interlude::*;
+
 pub use list_request::*;
 mod list_request;
+
+pub fn id_for_gram(
+    pub_key_multibase: &str,
+    created_at: OffsetDateTime,
+    content: &str,
+    coty: &str,
+    parent_id: Option<&str>,
+) -> blake3::Hash {
+    let json = serde_json::to_string(&serde_json::json!([
+        0,
+        pub_key_multibase,
+        created_at.unix_timestamp(),
+        content,
+        coty,
+        parent_id
+    ]))
+    .unwrap();
+    blake3::hash(json.as_bytes())
+}
+
+pub fn id_and_sig_for_gram(
+    keypair: &ed25519_dalek::SigningKey,
+    created_at: OffsetDateTime,
+    content: &str,
+    coty: &str,
+    parent_id: Option<&str>,
+) -> (blake3::Hash, ed25519_dalek::Signature) {
+    use ed25519_dalek::Signer;
+    let author_pubkey =
+        common::utils::encode_hex_multibase(&keypair.verifying_key().to_bytes()[..]);
+    let id = id_for_gram(author_pubkey.as_str(), created_at, content, coty, parent_id);
+    let sig = keypair.sign(id.as_bytes());
+    (id, sig)
+}
+
+pub fn hex_id_and_sig_for_gram(
+    keypair: &ed25519_dalek::SigningKey,
+    created_at: OffsetDateTime,
+    content: &str,
+    coty: &str,
+    parent_id: Option<&str>,
+) -> (String, String) {
+    let (id, sig) = id_and_sig_for_gram(keypair, created_at, content, coty, parent_id);
+    (
+        common::utils::encode_hex_multibase(id.as_bytes()),
+        common::utils::encode_hex_multibase(sig.to_bytes()),
+    )
+}
 
 pub mod testing {
 

@@ -35,16 +35,34 @@ fn validate_request(
     validator::ValidationErrors,
 > {
     validator::Validate::validate(&req)?;
-    let json = serde_json::to_string(&serde_json::json!([
-        0,
-        req.author_pubkey,
-        req.created_at.unix_timestamp(),
-        req.content,
-        req.coty,
-        req.parent_id,
-    ]))
-    .unwrap();
-    let id = blake3::hash(&json[..].as_bytes());
+    let diff = OffsetDateTime::now_utc() - req.created_at;
+    if !(diff.as_seconds_f64() < 60.0 && diff.as_seconds_f64() >= 0.0) {
+        let mut issues = validator::ValidationErrors::new();
+        issues.add(
+            "createdAt",
+            validator::ValidationError {
+                code: Cow::Borrowed("created_too_long_ago"),
+                message: Some(Cow::Borrowed(
+                    "Submitted epigrams are expected to have been authored and signed less than a minute ago.",
+                )),
+                params: [(
+                    std::borrow::Cow::from("value"),
+                    serde_json::json!(req.created_at),
+                )]
+                .into_iter()
+                .collect(),
+            },
+        );
+        return Err(issues.into());
+    }
+
+    let id = crate::utils::id_for_gram(
+        req.author_pubkey.as_str(),
+        req.created_at,
+        req.content.as_str(),
+        req.coty.as_str(),
+        req.parent_id.as_ref().map(|id| id.as_str()),
+    );
 
     let id_bytes = match common::utils::decode_hex_multibase(&req.id) {
         Ok(value) if &value[..] == &id.as_bytes()[..] => value,
@@ -367,7 +385,8 @@ mod tests {
         let prikey = ed25519_dalek::SigningKey::from_bytes(&prikey[..].try_into().unwrap());
         let author_pubkey = TEST_PUBKEY;
         let author_alias = "bridget";
-        let created_at = OffsetDateTime::from_unix_timestamp(1_690_962_268).unwrap();
+        // let created_at = OffsetDateTime::from_unix_timestamp(1_690_962_268).unwrap();
+        let created_at = OffsetDateTime::now_utc();
         let parent_id = GRAM_01_ID;
         let json = serde_json::to_string(&serde_json::json!([
             0,
@@ -430,7 +449,7 @@ mod tests {
         ),
         rejects_bad_id_created_at: (
             Request {
-                created_at: OffsetDateTime::now_utc(),
+                created_at: OffsetDateTime::now_utc() - std::time::Duration::new(4, 0),
                 ..fixture_request()
             },
             Some("id"),
@@ -488,7 +507,7 @@ mod tests {
                 },
                 TEST_PRIVKEY
             ),
-            Some("created_at"),
+            Some("createdAt"),
         ),
         rejects_bad_sig: (
             Request {
@@ -539,7 +558,7 @@ mod tests {
         works: {
             status: http::StatusCode::CREATED,
             body: fixture_request_json(),
-            check_json: fixture_request_json().remove_keys_from_obj(&["password"]),
+            check_json: fixture_request_json().remove_keys_from_obj(&["createdAt","id","sig"]),
             extra_assertions: &|EAArgs { test_cx, response_json, .. }| {
                 Box::pin(async move {
                     let cx = state_fn(test_cx);
@@ -563,7 +582,7 @@ mod tests {
                     let body = serde_json::from_slice(&body).unwrap_or_log();
                     tracing::info!(?body, "test");
                     check_json(
-                        ("expected", &req_body_json),
+                        ("expected", &req_body_json.remove_keys_from_obj(&["createdAt", "id", "sig"])),
                         ("response", &body),
                     );
                 })
@@ -572,7 +591,7 @@ mod tests {
         author_alias_is_optional: {
             status: http::StatusCode::CREATED,
             body: fixture_request_json().remove_keys_from_obj(&["authorAlias"]),
-            check_json: fixture_request_json().remove_keys_from_obj(&["authorAlias"]),
+            check_json: fixture_request_json().remove_keys_from_obj(&["authorAlias", "createdAt", "id", "sig"]),
         },
         fails_if_parent_id_not_found: {
             status: http::StatusCode::NOT_FOUND,

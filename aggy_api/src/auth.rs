@@ -16,6 +16,7 @@ pub enum Resource {
     Users,
     WebSession { id: uuid::Uuid },
     WebSessions,
+    Posts,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -29,6 +30,7 @@ pub enum Action {
 pub enum Role {
     SuperAdmin,
     Service,
+    User,
 }
 
 pub const TAG: common::Tag = common::Tag {

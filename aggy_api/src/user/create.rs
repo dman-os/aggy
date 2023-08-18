@@ -1,20 +1,5 @@
 use crate::interlude::*;
 
-#[test]
-#[ignore]
-fn gen_pub_pri_key() {
-    let pri_key = ed25519_dalek::SigningKey::generate(&mut rand::thread_rng());
-    let pub_key = pri_key.verifying_key();
-    println!(
-        "pri_key: {}",
-        common::utils::encode_hex_multibase(pri_key.to_bytes())
-    );
-    println!(
-        "pub_key: {}",
-        common::utils::encode_hex_multibase(pub_key.to_bytes())
-    );
-}
-
 #[derive(Debug, Clone)]
 pub struct CreateUser;
 

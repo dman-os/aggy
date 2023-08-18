@@ -16,6 +16,7 @@ CREATE TABLE posts.posts (
 ,   epigram_id    BYTEA                 NOT NULL
 ,   title         TEXT                  NOT NULL
 ,   url           TEXT
+,   body          TEXT
 
 ,   PRIMARY KEY(id)
 ,   FOREIGN KEY(author_id) REFERENCES auth.users

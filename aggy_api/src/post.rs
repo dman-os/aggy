@@ -12,6 +12,7 @@ pub struct Post {
     pub epigram_id: String,
     pub title: String,
     pub url: Option<String>,
+    pub body: Option<String>,
 
     #[schema(example = "hunter2")]
     pub author_username: String,
@@ -31,7 +32,7 @@ pub const TAG: common::Tag = common::Tag {
     desc: "Manipulate Post objects.",
 };
 
-// mod create;
+mod create;
 // mod delete;
 mod get;
 mod list;
@@ -40,7 +41,7 @@ mod list;
 pub fn router() -> axum::Router<SharedContext> {
     axum::Router::new()
         .merge(EndpointWrapper::new(get::GetPost))
-        // .merge(EndpointWrapper::new(create::CreatePost))
+        .merge(EndpointWrapper::new(create::CreatePost))
         // .merge(EndpointWrapper::new(update::UpdatePost))
         .merge(EndpointWrapper::new(list::ListPosts))
     // .merge(EndpointWrapper::new(delete::DeletePost))
@@ -50,7 +51,7 @@ pub fn components(
     builder: utoipa::openapi::ComponentsBuilder,
 ) -> utoipa::openapi::ComponentsBuilder {
     let builder = get::GetPost::components(builder);
-    // let builder = create::CreatePost::components(builder);
+    let builder = create::CreatePost::components(builder);
     // let builder = update::UpdatePost::components(builder);
     let builder = list::ListPosts::components(builder);
     // let builder = delete::DeletePost::components(builder);
@@ -59,8 +60,6 @@ pub fn components(
         <epigram_api::gram::Gram as utoipa::ToSchema>::schema(),
         <PostSortingField as utoipa::ToSchema>::schema(),
     ])
-    // .schemas_from_iter(<list::ListPostsRequest as utoipa::ToSchema>::aliases())
-    // .schemas_from_iter(<list::ListPostsResponse as utoipa::ToSchema>::aliases())
 }
 
 pub fn paths(
@@ -69,7 +68,7 @@ pub fn paths(
 ) -> utoipa::openapi::PathsBuilder {
     [
         (get::GetPost::PATH, get::GetPost::path_item()),
-        // (create::CreatePost::PATH, create::CreatePost::path_item()),
+        (create::CreatePost::PATH, create::CreatePost::path_item()),
         // (update::UpdatePost::PATH, update::UpdatePost::path_item()),
         // (delete::DeletePost::PATH, delete::DeletePost::path_item()),
         (list::ListPosts::PATH, list::ListPosts::path_item()),

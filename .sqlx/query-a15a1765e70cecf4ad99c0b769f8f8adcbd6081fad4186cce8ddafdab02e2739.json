@@ -1,0 +1,34 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT \n    username::TEXT as \"username!\"\n    ,'f' || encode(pub_key, 'hex') as \"pub_key!\"\n    ,pri_key\nFROM auth.users\nWHERE id = $1::uuid\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "username!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "pub_key!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "pri_key",
+        "type_info": "Bytea"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      false
+    ]
+  },
+  "hash": "a15a1765e70cecf4ad99c0b769f8f8adcbd6081fad4186cce8ddafdab02e2739"
+}

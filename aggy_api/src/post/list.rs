@@ -98,8 +98,9 @@ fn validate_request(
                     r#"WHERE 
                         {column} {op} (TO_TIMESTAMP({value}) AT TIME ZONE 'UTC')
                         AND 
-                        id {op}= $guessme${id}$guessme$::UUID
-                        "#
+                        id {} $guessme${id}$guessme$::UUID
+                        "#,
+                    if is_after { "<" } else { ">" }
                 )
             }
         };
@@ -147,6 +148,7 @@ FROM (
         ,p.id as "id"
         ,p.title as "title"
         ,p.url as "url"
+        ,p.body as "body"
         ,util.multibase_encode_hex(p.epigram_id) as "epigram_id"
         ,util.multibase_encode_hex(u.pub_key) as "author_pub_key"
         ,u.username::TEXT as "author_username"
@@ -276,6 +278,7 @@ impl DocumentedEndpoint for ListPosts {
                         .into(),
                     title: "Earth 2 reported to begin operations next circumsolar year".into(),
                     url: Some("ipns://𝕏.com/stella_oort/48723494675897134423".into()),
+                    body: Some("Please sign in to see this xeet.".into()),
                     author_username: "tazental".into(),
                     author_pic_url: None,
                     author_pub_key:
@@ -290,6 +293,7 @@ impl DocumentedEndpoint for ListPosts {
                         .into(),
                     title: "Earth 2 reported to begin operations next circumsolar year".into(),
                     url: Some("ipns://𝕏.com/stella_oort/48723494675897134423".into()),
+                    body: Some("Please sign in to see this xeet.".into()),
                     author_username: "tazental".into(),
                     author_pic_url: None,
                     author_pub_key:
@@ -468,12 +472,12 @@ mod tests {
                     assert_eq!(head.status, StatusCode::OK, "{head:?} {body:?}");
                     assert_eq!(
                         body["items"].as_array().unwrap().len(),
-                        2,
-                        "{resp_body_json:?}\n{body:?}"
+                        3,
+                        "{head:#?}\n{body:#?}\n{resp_body_json:#?}"
                     );
                     assert!(
                         body["cursor"].is_null(),
-                        "{resp_body_json:?}\n{body:?}"
+                        "{head:#?}\n{body:#?}"
                     );
                 })
             },

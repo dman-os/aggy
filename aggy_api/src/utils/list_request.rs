@@ -1,7 +1,7 @@
 use crate::interlude::*;
 
-use crate::user::{User, UserSortingField};
 use crate::post::{Post, PostSortingField};
+use crate::user::{User, UserSortingField};
 use serde::{Deserialize, Serialize};
 
 pub use common::utils::{Cursor, SortingField, SortingOrder, DEFAULT_LIST_LIMIT};
@@ -10,7 +10,7 @@ pub use common::utils::{Cursor, SortingField, SortingOrder, DEFAULT_LIST_LIMIT};
 #[serde(crate = "serde", rename_all = "camelCase")]
 #[validate(schema(function = "validate_list_req"))]
 #[aliases(
-    ListUsersRequest = ListRequest<UserSortingField>, 
+    ListUsersRequest = ListRequest<UserSortingField>,
     ListPostsRequest = ListRequest<PostSortingField>
 )]
 pub struct ListRequest<S>

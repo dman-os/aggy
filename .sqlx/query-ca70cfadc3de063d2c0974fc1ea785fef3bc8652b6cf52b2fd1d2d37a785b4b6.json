@@ -1,0 +1,83 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nWITH post AS (\n    INSERT INTO posts.posts (\n        id\n        ,created_at\n        ,updated_at\n        ,author_id\n        ,epigram_id\n        ,title\n        ,url\n        ,body\n    )\n    VALUES (\n        $1::UUID, $2 ,$3 ,$4 ,$5 ,$6 ,$7 ,$8\n    ) RETURNING *\n) SELECT \n    p.created_at as \"created_at!\"\n    ,p.updated_at as \"updated_at!\"\n    ,p.id as \"id\"\n    ,p.title as \"title\"\n    ,p.url as \"url\"\n    ,p.body as \"body\"\n    ,util.multibase_encode_hex(p.epigram_id) as \"epigram_id!\"\n    ,util.multibase_encode_hex(u.pub_key) as \"author_pub_key!\"\n    ,u.username::TEXT as \"author_username!\"\n    ,u.pic_url as \"author_pic_url\"\nFROM \n    post as p\n        LEFT JOIN\n    auth.users as u\n        ON (p.author_id = u.id)\n                                ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "created_at!",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 1,
+        "name": "updated_at!",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 2,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "title",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "url",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "body",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "epigram_id!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "author_pub_key!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 8,
+        "name": "author_username!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 9,
+        "name": "author_pic_url",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Timestamptz",
+        "Timestamptz",
+        "Uuid",
+        "Bytea",
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      null,
+      null,
+      null,
+      true
+    ]
+  },
+  "hash": "ca70cfadc3de063d2c0974fc1ea785fef3bc8652b6cf52b2fd1d2d37a785b4b6"
+}
