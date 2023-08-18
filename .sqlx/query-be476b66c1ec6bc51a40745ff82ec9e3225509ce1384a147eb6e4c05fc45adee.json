@@ -1,0 +1,73 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nWITH webs as (\n    INSERT INTO web.sessions (\n        auth_session_id, ip_addr, user_agent, expires_at\n    ) VALUES (\n        $1::UUID, $2::TEXT::INET, $3, $4\n    ) \n    RETURNING *\n)\n    SELECT\n        webs.id as \"id!\"\n    ,   webs.created_at as \"created_at!\"\n    ,   webs.updated_at as \"updated_at!\"\n    ,   webs.expires_at as \"expires_at!\"\n    ,   ip_addr as \"ip_addr!: std::net::IpAddr\"\n    ,   user_agent as \"user_agent!\"\n    ,   auths.expires_at as \"token_expires_at?\"\n    ,   token as \"token?\"\n    ,   user_id as \"user_id?\"\n    FROM (\n        webs\n            LEFT JOIN\n        auth.sessions auths\n            ON (webs.auth_session_id = auths.id)\n    )\n                ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id!",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "created_at!",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 2,
+        "name": "updated_at!",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 3,
+        "name": "expires_at!",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 4,
+        "name": "ip_addr!: std::net::IpAddr",
+        "type_info": "Inet"
+      },
+      {
+        "ordinal": 5,
+        "name": "user_agent!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "token_expires_at?",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 7,
+        "name": "token?",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 8,
+        "name": "user_id?",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "be476b66c1ec6bc51a40745ff82ec9e3225509ce1384a147eb6e4c05fc45adee"
+}

@@ -67,13 +67,13 @@ pub mod testing {
     use once_cell::sync::Lazy;
 
     pub const GRAM_01_ID: &'static str =
-        "f43203d798236edc55a20be5de2f9a401514b62e85ad0792fdffe4ca9b1b6a5a0";
+        "fc6d9d817d53dee6c0ae00205e9f32f6373b23215ddd442a5dce193cce73f5925";
     pub const GRAM_02_ID: &'static str =
-        "fa52b926f893d3019cdbddbf4c553232c43035b4fe08eb26c31892e3b57b3dfc5";
+        "f35a356563678440efa1eb44e5cb2036e5e31b9eb6f04ef5df0c70966d5226b12";
     pub const GRAM_03_ID: &'static str =
-        "f733866a0fd613e6afbd4687d8c5a4116cd298403c31fecf88f84c5961fc53a23";
+        "f6affc96805b62f5a4c47b1ef2cf436910eb4df0253c7226d94406e6ab2771de5";
     pub const GRAM_04_ID: &'static str =
-        "f0ae08db70cf1ff1d6d56248e59c6ab3adb1f6e34e3fe3fee61f636cc2f4851e1";
+        "f64eb58f1ee950ea7519039eb39690bd56c94065301246cb5d572b703bdaa6421";
 
     pub static GRAM_01: Lazy<Gram> = Lazy::new(|| {
         Gram{
@@ -82,9 +82,9 @@ pub mod testing {
         content: "I wan't you to know, I wan't you to know that I'm awake.".into(),
         coty: "text/html".into(),
         parent_id: None,
-        author_pubkey: "fdc67469e70cbcab49a7840ab1b44d56c7963a7ca24c626ebb792fa7f514f37aa".into(),
+        author_pubkey: "f4ea301616a42cfbbd03f33570038156065fc217a86cdcb993e9fb9b197d08b53".into(),
         author_alias: Some("use1".into()),
-        sig: "f2492541d9c12871570caeecb1aaec6d2197b5e058405393dc624a2299568055ec092fe91ea34a85b99cb45921fbab2999f5aa7f215956e4806f948b49a0d020d".into(),
+        sig: "f06a6016f64de7f22123816cc6a00db5c3d7d62da64fcb42daba234e2f6ecbc4ea6bb1671d035c3ffdbe6ed2a92dafbd5341f1d107557043b8d2fe018f17fbe0e".into(),
         replies: default()
     }
     });
@@ -95,9 +95,9 @@ pub mod testing {
         content: "And I hope you're asleep.".into(),
         coty: "text/html".into(),
         parent_id: Some(GRAM_01_ID.into()),
-        author_pubkey: "f43366142dc9ce1022ce9ec9deb72b0242ed3e097c8d7531cad8bf982cf9edb7f".into(),
+        author_pubkey: "fe90bb6e011ed9b2607b45c6917405f56b5c793168c578343e353cde94c4b6bed".into(),
         author_alias: Some("fideroth".into()),
-        sig: "f8e5934a66506ec9742c0af2393fcc5158da433012284f071b8c4a47b721cec3db91057f59f3f609bc23eaabe97a55524aff30ff12eb18b1d3cf55eaf981e3601".into(),
+        sig: "f519096262a6b214837dae999e8688d265bbed056207bc47fcf30e8a4b526b2bcd0e708f002f7c5d3ead38453a53a40735fb35fc56030902eb9a6eef03df66405".into(),
         replies: default()
     }
     });
@@ -108,9 +108,9 @@ pub mod testing {
         content: "*air guitars madly*".into(),
         coty: "text/html".into(),
         parent_id: Some(GRAM_02_ID.into()),
-        author_pubkey: "fdc67469e70cbcab49a7840ab1b44d56c7963a7ca24c626ebb792fa7f514f37aa".into(),
+        author_pubkey: "f4ea301616a42cfbbd03f33570038156065fc217a86cdcb993e9fb9b197d08b53".into(),
         author_alias: Some("use1".into()),
-        sig: "ffae46b531cb4ef8e466baa4d14e0fa8eec249345387717f72b28789c559486ab1b17b88e3bf3f22adafc6654dc8fc606fcbcbfcb82bed4254ccf142ed2c05a05".into(),
+        sig: "f9805011ae871eadbf5ab8e8501c2697731361ce11410d8afa9af696f89ce059f27dbce9bee77dc41e9fa4c44a7adfa02250e4f09911c7bd45302f846ebbeac0e".into(),
         replies: default()
     }
     });
@@ -121,9 +121,9 @@ pub mod testing {
         content: "*sads doggly*".into(),
         coty: "text/html".into(),
         parent_id: Some(GRAM_03_ID.into()),
-        author_pubkey: "f43366142dc9ce1022ce9ec9deb72b0242ed3e097c8d7531cad8bf982cf9edb7f".into(),
+        author_pubkey: "fe90bb6e011ed9b2607b45c6917405f56b5c793168c578343e353cde94c4b6bed".into(),
         author_alias: Some("fideroth".into()),
-        sig: "f85b92cd7c5d5e79778cf7698f728b6fec0c34f94300c9c59abbe755f526df461d35819f19d3c3704192e9f2b0cb1dbfeb900710e32c2afcca9a2469d8a832d09".into(),
+        sig: "f8bc68f72d274ad8919a01a62e2b512175fec2be38211de1c760dcd775539f45da0509d725ee4171a8ff4d78a370ae179f857a3ff3c78da0f6cfb6bd9d076990b".into(),
         replies: default()
     }
     });

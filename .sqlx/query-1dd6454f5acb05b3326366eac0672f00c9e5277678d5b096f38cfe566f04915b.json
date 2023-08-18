@@ -1,0 +1,76 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT \n    p.created_at as \"created_at!\"\n    ,p.updated_at as \"updated_at!\"\n    ,p.id as \"id\"\n    ,p.title as \"title\"\n    ,p.url as \"url\"\n    ,p.body as \"body\"\n    ,util.multibase_encode_hex(p.epigram_id) as \"epigram_id!\"\n    ,util.multibase_encode_hex(u.pub_key) as \"author_pub_key!\"\n    ,u.username::TEXT as \"author_username!\"\n    ,u.pic_url as \"author_pic_url\"\nFROM \n    posts.posts as p\n        LEFT JOIN\n    auth.users as u\n        ON (p.author_id = u.id)\nWHERE p.id = $1::UUID\n                ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "created_at!",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 1,
+        "name": "updated_at!",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 2,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "title",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "url",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "body",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "epigram_id!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "author_pub_key!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 8,
+        "name": "author_username!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 9,
+        "name": "author_pic_url",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      null,
+      null,
+      null,
+      true
+    ]
+  },
+  "hash": "1dd6454f5acb05b3326366eac0672f00c9e5277678d5b096f38cfe566f04915b"
+}

@@ -149,6 +149,10 @@ pub trait Client {
         &self,
         request: crate::gram::get::Request,
     ) -> Result<crate::gram::get::Response, Box<dyn std::error::Error>>;
+    async fn create_gram(
+        &self,
+        request: crate::gram::create::Request,
+    ) -> Result<crate::gram::create::Response, Box<dyn std::error::Error>>;
 }
 
 pub struct InProcClient {
@@ -166,6 +170,15 @@ impl Client for InProcClient {
             .await
             .map_err(|err| err.into())
     }
+    async fn create_gram(
+        &self,
+        request: crate::gram::create::Request,
+    ) -> Result<crate::gram::create::Response, Box<dyn std::error::Error + 'static>> {
+        crate::gram::create::CreateGram
+            .handle(&self.cx, request)
+            .await
+            .map_err(|err| err.into())
+    }
 }
 
 pub struct HttpClient {}
@@ -178,12 +191,17 @@ impl Client for HttpClient {
     ) -> Result<crate::gram::get::Response, Box<dyn std::error::Error + 'static>> {
         todo!("epigram_api::HttpClient is not yet implemented")
     }
+    async fn create_gram(
+        &self,
+        _: crate::gram::create::Request,
+    ) -> Result<crate::gram::create::Response, Box<dyn std::error::Error + 'static>> {
+        todo!("epigram_api::HttpClient is not yet implemented")
+    }
 }
 
 #[test]
 #[ignore]
 fn gen_grams() {
-    use ed25519_dalek::Signer;
     use gram::*;
 
     struct Seed {
@@ -199,22 +217,17 @@ fn gen_grams() {
     fn seed_to_gram(seed: Seed, parent_id: Option<String>) -> Gram {
         let created_at = OffsetDateTime::from_unix_timestamp(1_691_479_928).unwrap();
         let coty = "text/html".to_string();
+        let (id, sig) = crate::utils::id_and_sig_for_gram(
+            &seed.keypair,
+            created_at,
+            seed.content.as_str(),
+            coty.as_str(),
+            parent_id.as_ref().map(|id| id.as_str()),
+        );
+        // NOTE: we don't use multibase encoding
         let author_pubkey =
-            data_encoding::HEXLOWER_PERMISSIVE.encode(&seed.keypair.verifying_key().to_bytes()[..]);
-        let json = serde_json::to_string(&serde_json::json!([
-            0,
-            author_pubkey,
-            created_at.unix_timestamp(),
-            seed.content,
-            coty,
-            parent_id
-        ]))
-        .unwrap();
-        let id = blake3::hash(json.as_bytes());
-
-        let sig = seed.keypair.sign(id.as_bytes()).to_bytes();
-        let sig = data_encoding::HEXLOWER_PERMISSIVE.encode(&sig[..]);
-
+            data_encoding::HEXLOWER_PERMISSIVE.encode(seed.keypair.verifying_key().as_bytes());
+        let sig = data_encoding::HEXLOWER_PERMISSIVE.encode(&sig.to_bytes()[..]);
         let id = data_encoding::HEXLOWER_PERMISSIVE.encode(id.as_bytes());
         Gram {
             id,
@@ -358,7 +371,11 @@ fn gen_grams() {
                 ]),
             },
             Seed {
-                content: r#"<a href="https://simple.news/p/atlantis-resurface">Atlantis resurfaces 20 miles off the coast of Hong Kong!</a>"#
+                content: r#"<a href="https://simple.news/p/atlantis-resurface">Atlantis resurfaces 20 miles off the coast of Hong Kong!</a>
+<p>
+This is an ongoing story. Please abstain from moralspeech or alterjecting. 
+
+Make sure to make use of pubkeys registered on the Bloodchain as per JURISPRUDENCE-COMMIT-9becb3c12. All unregistered pubkeys will be held liabale for any casualites and damage in case of flamewars.</p>"#
                     .to_string(),
                 keypair: aggy_authors[0].keypair.clone(),
                 alias: aggy_authors[0].alias.clone(),
@@ -402,6 +419,22 @@ fn gen_grams() {
                             ]),
                         }]),
                     },
+                ]),
+            },
+            Seed {
+                content: r#"<a href="https://aggy.news/p/a0c78830-d6c5-4133-af47-daac110aeb2c.txt">I suspect my wife of YDL membership</a>
+
+<p>I first started to notice the signs a few weeks ago after I discovred somne inconsistency in my terminal history. Note: I'm currently employed an employee of Alphaborg at their Youtube division. Any advice is appreciated.</p>"#
+                    .to_string(),
+                keypair: aggy_authors[1].keypair.clone(),
+                alias: aggy_authors[1].alias.clone(),
+                replies: Some(vec![
+                    Seed {
+                        content: "NOTE: Thread has been shut down due to unsanctioned flamewar.".to_string(),
+                        keypair: aggy_authors[2].keypair.clone(),
+                        alias: aggy_authors[2].alias.clone(),
+                        replies: None,
+                    }
                 ]),
             },
             Seed {

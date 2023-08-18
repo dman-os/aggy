@@ -1,0 +1,70 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    webs.id as \"id!\"\n,   webs.created_at as \"created_at!\"\n,   webs.updated_at as \"updated_at!\"\n,   webs.expires_at as \"expires_at!\"\n,   ip_addr as \"ip_addr!: std::net::IpAddr\"\n,   user_agent as \"user_agent!\"\n,   auths.expires_at as \"token_expires_at?\"\n,   token as \"token?\"\n,   user_id as \"user_id?\"\nFROM (\n    web.sessions webs\n        LEFT JOIN\n    auth.sessions auths\n        ON (webs.auth_session_id = auths.id)\n)\nWHERE webs.id = $1\n    ;\n                ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id!",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "created_at!",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 2,
+        "name": "updated_at!",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 3,
+        "name": "expires_at!",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 4,
+        "name": "ip_addr!: std::net::IpAddr",
+        "type_info": "Inet"
+      },
+      {
+        "ordinal": 5,
+        "name": "user_agent!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "token_expires_at?",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 7,
+        "name": "token?",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 8,
+        "name": "user_id?",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "1742ce7c118b35174a797adf569b683a1c4b54be8d1348f979b27eb0b9b674db"
+}

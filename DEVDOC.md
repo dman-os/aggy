@@ -16,6 +16,7 @@
 - [ ] Logging
 - [ ] Replace UUIDs with HashIDs for user id?
 - [ ] Use camel case error field codes in ValidationErrors
+- [ ] html sanitization
 
 - [ ] Consider SurrealDb
 

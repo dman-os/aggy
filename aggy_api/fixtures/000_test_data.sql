@@ -52,13 +52,26 @@ DO $body$
             ,epigram_id
             ,title
             ,url
+            ,body
         ) VALUES (
             'a4dac041-b0a4-4afd-a1a6-83ed69c4dfe5'::uuid
             ,le_user.id
-            ,'\x65fdb61533b12c0be75352af20134ba2e7cc1d7ccba7c81a6eb3dad18ab7d0cd'::bytea
+            ,'\x2abd6980fedaf96871a82f4f71aa08a693925ae287cc2b44426859c4aa4b74f4'::bytea
             ,'Atlantis resurfaces 20 miles off the coast of Hong Kong!'
             ,'https://simple.news/p/atlantis-resurface'
-        );
+            ,$$This is an ongoing story. Please abstain from moralspeech or alterjecting. 
+
+Make sure to make use of pubkeys registered on the Bloodchain as per JURISPRUDENCE-COMMIT-9becb3c12. All unregistered pubkeys will be held liabale for any casualites and damage in case of flamewars.$$
+        ),
+        (
+            'a0c78830-d6c5-4133-af47-daac110aeb2c'::uuid
+            ,le_user.id
+            ,'\xb724f8c17b7782bd72a471b37d90aea3c887bbcfe98b20d2de240e917cbb1043'::bytea
+            ,'I suspect my wife of YDL membership'
+            ,NULL
+            ,$$I first started to notice the signs a few weeks ago after I discovred somne inconsistency in my terminal history. Note: I'm currently employed an employee of Alphaborg at their Youtube division. Any advice is appreciated.$$
+        )
+        ;
     END;
 $body$ LANGUAGE PLpgSQL;
 
@@ -96,7 +109,7 @@ DO $body$
         ) VALUES (
             '244018b4-8081-4a93-9828-6e908591bd16'::uuid
             ,le_user.id
-            ,'\x01e94b7091caea92f5d0f07a06efc088feaf848f44b6b65dfffa2df1357fcf7b'::bytea
+            ,'\xf1fe48098ee8a9c3de6ad11d132f4bbfa5ddfe1e3ab0608b4a07aacadd4e69b9'::bytea
             ,'Tokyo report shows record numbers of discarded limbs infesting underways'
             ,'nncp://857893/8471291/7583921748203.txt'
         );
@@ -137,7 +150,7 @@ DO $body$
         ) VALUES (
             '4829545d-a9ff-4a06-b00f-a22a6ba4c5eb'::uuid
             ,le_user.id
-            ,'\x6a6ed2475a9d74e1a630b581617c975dd8c2a7fa1a53f3711fef9212bbb13504'::bytea
+            ,'\x378d684f41f0896c67d3514d6ea6f4bc513a27f0220eb49256fd144dcc85d0e2'::bytea
             ,'REM sleep adware considered dangerous'
             ,'https://nil.null/89897898-rem-adware-danger'
         );
@@ -196,7 +209,7 @@ DO $body$
         ) VALUES (
             'd7c222dd-f4bb-4639-ae6e-41c94cc57be1'::uuid
             ,le_user.id
-            ,'\xeb80db9a7dd7a0c4b1b02720993233cf12f6102f3f016c4b1b6340b7c3f2bee0'::bytea
+            ,'\x1285cb45d6495cf1ce6637179517a38758b2c0019dabf1b4492dc3e5d976cedd'::bytea
             ,'P=NP in 9 dimensions'
             ,'https://arxiv.org/abs/31415.193'
         );
