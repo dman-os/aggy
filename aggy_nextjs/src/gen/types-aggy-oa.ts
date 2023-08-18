@@ -56,6 +56,7 @@ export const Post = z
     epigramId: z.string(),
     title: z.string(),
     url: z.string().nullish(),
+    body: z.string().nullish(),
     authorUsername: z.string(),
     authorPicUrl: z.string().nullish(),
     authorPubKey: z.string(),
@@ -81,6 +82,20 @@ export const ValidationErrors: z.ZodType<ValidationErrors> = z.lazy(() =>
   z.record(ValidationErrorsKind)
 );
 export const ListPostsError = z.discriminatedUnion("error", [
+  z
+    .object({ issues: ValidationErrors, error: z.literal("invalidInput") })
+    .passthrough(),
+  z.object({ message: z.string(), error: z.literal("internal") }).passthrough(),
+]);
+export const CreatePost_Body = z
+  .object({
+    title: z.string().min(1).max(80),
+    url: z.string().nullish(),
+    body: z.string().min(1).nullish(),
+  })
+  .passthrough();
+export const CreatePostError = z.discriminatedUnion("error", [
+  z.object({ error: z.literal("accessDenied") }).passthrough(),
   z
     .object({ issues: ValidationErrors, error: z.literal("invalidInput") })
     .passthrough(),
@@ -324,6 +339,35 @@ export const endpoints = {
       },
     ],
   },
+  CreatePost: {
+    method: "post",
+    path: "/aggy/posts",
+    parameters: {
+      body: {
+        name: "body",
+        type: "Body",
+        schema: CreatePost_Body,
+      },
+    },
+    response: Post,
+    errors: [
+      {
+        status: 400,
+        description: `Invalid input`,
+        schema: CreatePostError,
+      },
+      {
+        status: 401,
+        description: `Access Denied`,
+        schema: CreatePostError,
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: CreatePostError,
+      },
+    ],
+  },
   GetPost: {
     method: "get",
     path: "/aggy/posts/:id",
@@ -396,7 +440,7 @@ export const endpoints = {
     errors: [
       {
         status: 400,
-        description: `Invalid input | Username occupied | Email occupied`,
+        description: `Invalid input | Email occupied | Username occupied`,
         schema: CreateUserError,
       },
       {
@@ -454,7 +498,7 @@ export const endpoints = {
     errors: [
       {
         status: 400,
-        description: `Email occupied | Username occupied | Invalid input`,
+        description: `Username occupied | Email occupied | Invalid input`,
         schema: UpdateUserError,
       },
       {

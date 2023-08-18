@@ -123,6 +123,7 @@ export class AggyClient {
           // "Content-Type": "application/json",
           "Authorization": `Bearer ${this.serviceSecret}`,
         },
+        cache: 'no-cache'
         // body: JSON.stringify(input),
       }
     );
@@ -151,6 +152,26 @@ export class AggyClient {
         return undefined;
       }
       throw err;
+    }
+    const body = await response.json();
+    return zodMustParse(T.validators.post, body);
+  }
+
+  async createPost(uncleanInput: T.CreatePostBody, authToken: string,) {
+    const input = dbg(T.validators.createPostBody.parse(uncleanInput));
+    const response = await fetch(
+      `${this.baseUrl}/posts`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${authToken}`
+        },
+        body: JSON.stringify(input)
+      }
+    );
+    if (!response.ok) {
+      throw await AggyApiError.fromResponse(response);
     }
     const body = await response.json();
     return zodMustParse(T.validators.post, body);
