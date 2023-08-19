@@ -10,6 +10,7 @@ export type Gram = {
   authorAlias?: string | null;
   sig: string;
   replies?: Array<Gram> | null;
+  replyCount?: number | null;
 };
 export type ValidationErrors = {};
 export type ValidationError = {
@@ -29,10 +30,9 @@ export const AuthenticateError = z.discriminatedUnion("error", [
   z.object({ error: z.literal("credentialsRejected") }).passthrough(),
   z.object({ message: z.string(), error: z.literal("internal") }).passthrough(),
 ]);
-export const PostSortingField = z.enum(["createdAt", "updatedAt"]);
-export const sortingField = PostSortingField.nullish();
-export const SortingOrder = z.enum(["ascending", "descending"]);
-export const sortingOrder = SortingOrder.nullish();
+export const Reply_Body = z
+  .object({ parentId: z.string().nullish(), body: z.string().min(1) })
+  .passthrough();
 export const Gram: z.ZodType<Gram> = z.lazy(() =>
   z
     .object({
@@ -45,24 +45,10 @@ export const Gram: z.ZodType<Gram> = z.lazy(() =>
       authorAlias: z.string().nullish(),
       sig: z.string(),
       replies: z.array(Gram).nullish(),
+      replyCount: z.number().int().nullish(),
     })
     .passthrough()
 );
-export const Post = z
-  .object({
-    id: z.string().uuid(),
-    createdAt: z.string().datetime({ offset: true }),
-    updatedAt: z.string().datetime({ offset: true }),
-    epigramId: z.string(),
-    title: z.string(),
-    url: z.string().nullish(),
-    body: z.string().nullish(),
-    authorUsername: z.string(),
-    authorPicUrl: z.string().nullish(),
-    authorPubKey: z.string(),
-    epigram: Gram.nullish(),
-  })
-  .passthrough();
 export const ValidationError = z
   .object({
     code: z.string(),
@@ -81,6 +67,33 @@ export const ValidationErrorsKind: z.ZodType<ValidationErrorsKind> = z.lazy(
 export const ValidationErrors: z.ZodType<ValidationErrors> = z.lazy(() =>
   z.record(ValidationErrorsKind)
 );
+export const ReplyError = z.discriminatedUnion("error", [
+  z.object({ id: z.string(), error: z.literal("notFound") }).passthrough(),
+  z.object({ error: z.literal("accessDenied") }).passthrough(),
+  z
+    .object({ issues: ValidationErrors, error: z.literal("invalidInput") })
+    .passthrough(),
+  z.object({ message: z.string(), error: z.literal("internal") }).passthrough(),
+]);
+export const PostSortingField = z.enum(["createdAt", "updatedAt"]);
+export const sortingField = PostSortingField.nullish();
+export const SortingOrder = z.enum(["ascending", "descending"]);
+export const sortingOrder = SortingOrder.nullish();
+export const Post = z
+  .object({
+    id: z.string().uuid(),
+    createdAt: z.string().datetime({ offset: true }),
+    updatedAt: z.string().datetime({ offset: true }),
+    epigramId: z.string(),
+    title: z.string(),
+    url: z.string().nullish(),
+    body: z.string().nullish(),
+    authorUsername: z.string(),
+    authorPicUrl: z.string().nullish(),
+    authorPubKey: z.string(),
+    epigram: Gram.nullish(),
+  })
+  .passthrough();
 export const ListPostsError = z.discriminatedUnion("error", [
   z
     .object({ issues: ValidationErrors, error: z.literal("invalidInput") })
@@ -283,6 +296,45 @@ export const endpoints = {
       },
     ],
   },
+  Reply: {
+    method: "post",
+    path: "/aggy/grams/:id/replies",
+    parameters: {
+      body: {
+        name: "body",
+        type: "Body",
+        schema: Reply_Body,
+      },
+      id: {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+    },
+    response: Gram,
+    errors: [
+      {
+        status: 400,
+        description: `Invalid input`,
+        schema: ReplyError,
+      },
+      {
+        status: 401,
+        description: `Access Denied`,
+        schema: ReplyError,
+      },
+      {
+        status: 404,
+        description: `Not Found`,
+        schema: ReplyError,
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: ReplyError,
+      },
+    ],
+  },
   ListPosts: {
     method: "get",
     path: "/aggy/posts",
@@ -440,7 +492,7 @@ export const endpoints = {
     errors: [
       {
         status: 400,
-        description: `Invalid input | Email occupied | Username occupied`,
+        description: `Username occupied | Invalid input | Email occupied`,
         schema: CreateUserError,
       },
       {

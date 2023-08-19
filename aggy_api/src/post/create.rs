@@ -199,9 +199,7 @@ FROM
                 )
                 .fetch_one(db_pool)
                 .await
-                .map_err(|err| match &err {
-                    _ => common::internal_err!("db error: {err}"),
-                })?;
+                .map_err(|err| common::internal_err!("db error: {err}"))?;
                 Post {
                     id: row.id,
                     created_at: row.created_at,

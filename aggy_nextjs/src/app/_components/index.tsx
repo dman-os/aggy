@@ -4,15 +4,18 @@ import Link from 'next/link';
 
 import * as T from "@/client/types";
 import * as Actions from "@/app/api/actions";
+import { apiClient } from '@/client/index.server';
 
-export function PostStatusLines({ post, csrfToken }: { post: T.Post, csrfToken: string, }) {
+export async function PostStatusLines({ post, csrfToken }: { post: T.Post, csrfToken: string, }) {
+  let { client } = apiClient();
+  let gram = await client.epigram.getGram(post.epigramId);
   return <div className="postStatusLines">
     <div className="postStatusDetailsLine flex gap-1">
       <span>
         by <Link href={`/user/${post.authorPubKey}`}>{post.authorUsername}</Link>
       </span>
       |
-      <a href={`/p/${post.id}`}>X comments</a>
+      <a href={`/p/${post.id}`}>{gram?.replyCount} comments</a>
     </div>
     <div className="postStatusFacesLine flex gap-1">
       {Object.entries({ 'b': { count: 1, userFacedAt: null } }).map(([rxn, { count, userFacedAt: userFacedAtTs }]) =>

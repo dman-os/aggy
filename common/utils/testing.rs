@@ -196,10 +196,10 @@ impl<'a> sqlx::migrate::MigrationSource<'a> for FlywayMigrationSource<'a> {
                 Result<sqlx::migrate::Migration, sqlx::error::BoxDynError>,
             >,
         }
-        fn walk_dir<'a>(
-            path: &'a std::path::Path,
+        fn walk_dir(
+            path: &std::path::Path,
             cx: WalkCx,
-        ) -> futures::future::BoxFuture<'a, ()> {
+        ) -> futures::future::BoxFuture<'_, ()> {
             Box::pin(async move {
                 let mut s = match tokio::fs::read_dir(path).await {
                     Ok(val) => val,

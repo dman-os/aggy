@@ -1,5 +1,6 @@
 import * as zod from "zod";
-import * as oa from "@/gen/types-aggy-oa"
+import * as oaAggy from "@/gen/types-aggy-oa"
+import * as oaEpi from "@/gen/types-epigram-oa"
 import { assertNotNull } from "@/utils";
 
 export type AggyPost = {
@@ -28,50 +29,50 @@ export type FaceSummary = {
   userFacedAt?: number;
 }
 
-export const MIN_LENGTH_USERNAME = assertNotNull(oa.CreateUser_Body.shape.username.minLength);
-export const MAX_LENGTH_USERNAME = assertNotNull(oa.CreateUser_Body.shape.username.maxLength);
+export const MIN_LENGTH_USERNAME = assertNotNull(oaAggy.CreateUser_Body.shape.username.minLength);
+export const MAX_LENGTH_USERNAME = assertNotNull(oaAggy.CreateUser_Body.shape.username.maxLength);
 
-export const MIN_LENGTH_PASSWORD = assertNotNull(oa.CreateUser_Body.shape.password.minLength);
-export const MAX_LENGTH_PASSWORD = assertNotNull(oa.CreateUser_Body.shape.password.maxLength);
+export const MIN_LENGTH_PASSWORD = assertNotNull(oaAggy.CreateUser_Body.shape.password.minLength);
+export const MAX_LENGTH_PASSWORD = assertNotNull(oaAggy.CreateUser_Body.shape.password.maxLength);
 
-export const MAX_LENGTH_TITLE = assertNotNull(oa.CreatePost_Body.shape.title.maxLength);
+export const MAX_LENGTH_TITLE = assertNotNull(oaAggy.CreatePost_Body.shape.title.maxLength);
 
 export const validators = {
-  createUserBody: oa.CreateUser_Body.merge(
+  createUserBody: oaAggy.CreateUser_Body.merge(
     zod.object({
       email: zod.string().email().nullish(),
     })
   ),
-  user: oa.User.merge(
+  user: oaAggy.User.merge(
     zod.object({
       id: zod.string(),
     })
   ),
-  post: oa.Post.merge(
+  post: oaAggy.Post.merge(
     zod.object({
     })
   ),
-  gram: oa.Gram,
+  gram: oaEpi.Gram,
 
-  createSessionBody: oa.CreateWebSession_Body.merge(
+  createSessionBody: oaAggy.CreateWebSession_Body.merge(
     zod.object({
       ipAddr: zod.string().ip(),
     })
   ),
-  updateSessionBody: oa.endpoints.UpdateWebSession.parameters.body.schema.merge(
+  updateSessionBody: oaAggy.endpoints.UpdateWebSession.parameters.body.schema.merge(
     zod.object({
       authSessionId: zod.string().nullish(),
     })
   ),
-  session: oa.Session.merge(
+  session: oaAggy.Session.merge(
     zod.object({
       id: zod.string(),
       userId: zod.string().nullish(),
     })
   ),
 
-  authenticateBody: oa.Authenticate_Body,
-  authenticateResponse: oa.endpoints.Authenticate.response.merge(
+  authenticateBody: oaAggy.Authenticate_Body,
+  authenticateResponse: oaAggy.endpoints.Authenticate.response.merge(
     zod.object({
       sessionId: zod.string(),
       userId: zod.string(),
@@ -79,15 +80,15 @@ export const validators = {
   ),
 
   listPostsQuery: zod.object({
-    limit: oa.endpoints.ListPosts.parameters.limit.schema,
-    afterCursor: oa.endpoints.ListPosts.parameters.afterCursor.schema,
-    beforeCursor: oa.endpoints.ListPosts.parameters.beforeCursor.schema,
-    filter: oa.endpoints.ListPosts.parameters.filter.schema,
-    sortingField: oa.endpoints.ListPosts.parameters.sortingField.schema,
-    sortingOrder: oa.endpoints.ListPosts.parameters.sortingOrder.schema,
+    limit: oaAggy.endpoints.ListPosts.parameters.limit.schema,
+    afterCursor: oaAggy.endpoints.ListPosts.parameters.afterCursor.schema,
+    beforeCursor: oaAggy.endpoints.ListPosts.parameters.beforeCursor.schema,
+    filter: oaAggy.endpoints.ListPosts.parameters.filter.schema,
+    sortingField: oaAggy.endpoints.ListPosts.parameters.sortingField.schema,
+    sortingOrder: oaAggy.endpoints.ListPosts.parameters.sortingOrder.schema,
   }),
-  listPostsResponse: oa.endpoints.ListPosts.response,
-  createPostBody: oa.CreatePost_Body.merge(
+  listPostsResponse: oaAggy.endpoints.ListPosts.response,
+  createPostBody: oaAggy.CreatePost_Body.merge(
     zod.object({
       url: zod.string().url().nullish()
     })
