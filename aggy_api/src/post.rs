@@ -33,6 +33,7 @@ pub const TAG: common::Tag = common::Tag {
 };
 
 mod create;
+mod reply;
 // mod delete;
 mod get;
 mod list;
@@ -42,6 +43,7 @@ pub fn router() -> axum::Router<SharedContext> {
     axum::Router::new()
         .merge(EndpointWrapper::new(get::GetPost))
         .merge(EndpointWrapper::new(create::CreatePost))
+        .merge(EndpointWrapper::new(reply::Reply))
         // .merge(EndpointWrapper::new(update::UpdatePost))
         .merge(EndpointWrapper::new(list::ListPosts))
     // .merge(EndpointWrapper::new(delete::DeletePost))
@@ -52,6 +54,7 @@ pub fn components(
 ) -> utoipa::openapi::ComponentsBuilder {
     let builder = get::GetPost::components(builder);
     let builder = create::CreatePost::components(builder);
+    let builder = reply::Reply::components(builder);
     // let builder = update::UpdatePost::components(builder);
     let builder = list::ListPosts::components(builder);
     // let builder = delete::DeletePost::components(builder);
@@ -69,6 +72,7 @@ pub fn paths(
     [
         (get::GetPost::PATH, get::GetPost::path_item()),
         (create::CreatePost::PATH, create::CreatePost::path_item()),
+        (reply::Reply::PATH, reply::Reply::path_item()),
         // (update::UpdatePost::PATH, update::UpdatePost::path_item()),
         // (delete::DeletePost::PATH, delete::DeletePost::path_item()),
         (list::ListPosts::PATH, list::ListPosts::path_item()),
@@ -90,4 +94,7 @@ pub mod testing {
     pub const POST_02_ID: uuid::Uuid = uuid::uuid!("244018b4-8081-4a93-9828-6e908591bd16");
     pub const POST_03_ID: uuid::Uuid = uuid::uuid!("4829545d-a9ff-4a06-b00f-a22a6ba4c5eb");
     pub const POST_04_ID: uuid::Uuid = uuid::uuid!("d7c222dd-f4bb-4639-ae6e-41c94cc57be1");
+
+    pub const POST_02_EPIGRAM_ID: &'static str =
+        "ff1fe48098ee8a9c3de6ad11d132f4bbfa5ddfe1e3ab0608b4a07aacadd4e69b9";
 }

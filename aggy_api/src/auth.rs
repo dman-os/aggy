@@ -17,6 +17,8 @@ pub enum Resource {
     WebSession { id: uuid::Uuid },
     WebSessions,
     Posts,
+    Replies { id: String },
+    Reply { id: String },
 }
 
 #[derive(Debug, Clone, Copy)]
