@@ -85,7 +85,7 @@ impl axum::extract::FromRef<SharedContext> for SharedServiceContext {
 pub fn router(state: SharedContext) -> axum::Router {
     axum::Router::new()
         .merge(gram::router())
-        .with_state(state.clone())
+        .with_state(state)
     // .merge(web::router().with_state(SharedServiceContext(ServiceContext(state))))
 }
 
@@ -222,7 +222,7 @@ fn gen_grams() {
             created_at,
             seed.content.as_str(),
             coty.as_str(),
-            parent_id.as_ref().map(|id| id.as_str()),
+            parent_id.as_deref(),
         );
         // NOTE: we don't use multibase encoding
         let author_pubkey =

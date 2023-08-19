@@ -1,7 +1,7 @@
 import { dbg } from "@/utils";
+
+import { zodMustParse } from "./";
 import * as T from "./types";
-import * as zod from "zod";
-import { fromZodError } from "zod-validation-error";
 
 export class AggyClient {
   constructor(
@@ -93,7 +93,6 @@ export class AggyClient {
       {
         method: "GET",
         headers: {
-          "Content-Type": "application/json",
           "Authorization": `Bearer ${this.serviceSecret}`,
         },
         // cache: "only-if-cached"
@@ -206,12 +205,4 @@ export class AggyApiError extends Error {
       message: await response.text()
     };
   }
-}
-
-function zodMustParse<I, O>(schema: zod.Schema<O>, input: I) {
-  const result = schema.safeParse(input)
-  if (!result.success) {
-    throw Error(`Unexpected error validating schema: ${fromZodError(result.error).toString()}`);
-  }
-  return result.data;
 }

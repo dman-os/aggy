@@ -10,6 +10,7 @@ export type Gram = {
   authorAlias?: string | null;
   sig: string;
   replies?: Array<Gram> | null;
+  replyCount?: number | null;
 };
 export type ValidationErrors = {};
 export type ValidationError = {
@@ -46,6 +47,7 @@ export const Gram: z.ZodType<Gram> = z.lazy(() =>
       authorAlias: z.string().nullish(),
       sig: z.string(),
       replies: z.array(Gram).nullish(),
+      replyCount: z.number().int().nullish(),
     })
     .passthrough()
 );

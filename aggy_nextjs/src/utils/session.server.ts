@@ -83,6 +83,7 @@ export class SessionStore {
 async function addCookieSession(cookies: ResponseCookies, session: T.Session) {
   const jwt = await new jose.SignJWT({
     sid: session.id,
+    // uname: session.
   })
     .setProtectedHeader({ alg: 'HS256' })
     .setExpirationTime(new Date(session.expiresAt).valueOf())
@@ -111,7 +112,8 @@ async function readCookieSession() {
     (await jose.jwtVerify(jwt, SESSION_SECRET)).payload
   )
   return {
-    id: payload.sid as string
+    id: payload.sid as string,
+    // username: payload.uname as string,
   }
 }
 

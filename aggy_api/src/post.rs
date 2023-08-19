@@ -95,6 +95,6 @@ pub mod testing {
     pub const POST_03_ID: uuid::Uuid = uuid::uuid!("4829545d-a9ff-4a06-b00f-a22a6ba4c5eb");
     pub const POST_04_ID: uuid::Uuid = uuid::uuid!("d7c222dd-f4bb-4639-ae6e-41c94cc57be1");
 
-    pub const POST_02_EPIGRAM_ID: &'static str =
+    pub const POST_02_EPIGRAM_ID: &str =
         "ff1fe48098ee8a9c3de6ad11d132f4bbfa5ddfe1e3ab0608b4a07aacadd4e69b9";
 }

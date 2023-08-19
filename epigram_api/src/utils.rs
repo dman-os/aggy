@@ -56,7 +56,7 @@ pub mod testing {
     use common::utils::testing::{TestContext, TestDb};
     use deps::*;
 
-    pub const SERVICE_SECRET: &'static str = "public square";
+    pub const SERVICE_SECRET: &str = "public square";
 
     pub fn state_fn_service(testing: &TestContext) -> crate::SharedServiceContext {
         crate::SharedServiceContext(crate::ServiceContext(state_fn(testing)))

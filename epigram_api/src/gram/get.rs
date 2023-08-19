@@ -84,6 +84,9 @@ FROM recurs
                         },
                         _ => common::internal_err!("db error: {err}"),
                     })?;
+                    if rows.is_empty() {
+                        return Err(Error::NotFound { id: request.id.clone() });
+                    }
 
                     type OptVec = Vec<Option<Gram>>;
                     type FilialMap = std::collections::HashMap<String, Vec<usize>>;
@@ -331,6 +334,13 @@ mod tests {
         },
         fails_if_not_found: {
             uri: format!("/grams/{}", Uuid::new_v4()),
+            status: StatusCode::NOT_FOUND,
+            check_json: serde_json::json!({
+                "error": "notFound",
+            }),
+        },
+        fails_if_not_found_2: {
+            uri: format!("/grams/{}?includeReplies", Uuid::new_v4()),
             status: StatusCode::NOT_FOUND,
             check_json: serde_json::json!({
                 "error": "notFound",

@@ -53,7 +53,7 @@ fn validate_request(
                 .collect(),
             },
         );
-        return Err(issues.into());
+        return Err(issues);
     }
 
     let id = crate::utils::id_for_gram(
@@ -61,7 +61,7 @@ fn validate_request(
         req.created_at,
         req.content.as_str(),
         req.coty.as_str(),
-        req.parent_id.as_ref().map(|id| id.as_str()),
+        req.parent_id.as_deref(),
     );
 
     let id_bytes = match common::utils::decode_hex_multibase(&req.id) {
@@ -83,7 +83,7 @@ fn validate_request(
                     .collect(),
                 },
             );
-            return Err(issues.into());
+            return Err(issues);
         }
     };
     let pubkey = match common::utils::decode_hex_multibase(&req.author_pubkey).and_then(|buf| {
@@ -112,7 +112,7 @@ fn validate_request(
                 .collect(),
                 },
             );
-            return Err(issues.into());
+            return Err(issues);
         }
     };
 
@@ -135,7 +135,7 @@ fn validate_request(
                         .collect(),
                 },
             );
-            return Err(issues.into());
+            return Err(issues);
         }
     };
     Ok((id_bytes, pubkey, sig))
@@ -352,9 +352,9 @@ mod tests {
 
     use ed25519_dalek::Signer;
 
-    const TEST_PRIVKEY: &'static str =
+    const TEST_PRIVKEY: &str =
         "f48cf7ffde6b73a4f5bc2749a335585d9750af7afc711063d85a104dc6c374e24";
-    const TEST_PUBKEY: &'static str =
+    const TEST_PUBKEY: &str =
         "faecf2e46a2ae333aaf1a1ae8624d422bfcb57480ae25214b16bc12f03f32ff3e";
 
     fn fixture_request() -> Request {

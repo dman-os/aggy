@@ -1,12 +1,20 @@
+
 export * from "./aggy";
+export * from "./epigram";
 export * as T from "./types";
+
+import * as zod from "zod";
+import { fromZodError } from "zod-validation-error";
+
 import { AggyClient } from "./aggy";
+import { EpigramClient } from "./epigram";
 import type * as T from "./types";
 
 
 export class ApiClient {
   constructor(
-    public aggy: AggyClient
+    public aggy: AggyClient,
+    public epigram: EpigramClient,
   ) { }
 
   async getTopPosts() {
@@ -121,3 +129,11 @@ export const topPosts: T.AggyPost[] = [
   }
   , []
 );
+
+export function zodMustParse<I, O>(schema: zod.Schema<O>, input: I) {
+  const result = schema.safeParse(input)
+  if (!result.success) {
+    throw Error(`Unexpected error validating schema: ${fromZodError(result.error).toString()}`);
+  }
+  return result.data;
+}

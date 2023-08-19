@@ -2,7 +2,10 @@
 
 ## To-do
 
-- [x] Move to flywaydb for migrations
+- [ ] Comment counts
+- [ ] Markdown input and html sanitization
+- [ ] Stylization
+  - [ ] Dark mode
 - [ ] Some policy when the API is unable to contact other services
   - [ ] Attempt to recreate connections?
 - [ ] Auth
@@ -16,9 +19,10 @@
 - [ ] Logging
 - [ ] Replace UUIDs with HashIDs for user id?
 - [ ] Use camel case error field codes in ValidationErrors
-- [ ] html sanitization
 
 - [ ] Consider SurrealDb
+
+- [x] Move to flywaydb for migrations
 
 ## design-doc
 

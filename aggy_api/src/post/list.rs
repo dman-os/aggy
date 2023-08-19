@@ -181,8 +181,7 @@ LIMIT $2 + 1
             Err(sqlx::Error::RowNotFound) => Ok(Response {
                 cursor: None,
                 items: vec![],
-            }
-            .into()),
+            }),
             Err(err) => Err(common::internal_err!("db err: {err}")),
             Ok(rows) => {
                 use sqlx::FromRow;
@@ -226,7 +225,7 @@ LIMIT $2 + 1
                 } else {
                     None
                 };
-                Ok(Response { cursor, items }.into())
+                Ok(Response { cursor, items })
             }
         }
     }
@@ -254,8 +253,7 @@ impl HttpEndpoint for ListPosts {
         Ok(Request {
             // auth_token: Some(token),
             ..request
-        }
-        .into())
+        })
     }
 
     fn response(resp: Self::Response) -> HttpResponse {

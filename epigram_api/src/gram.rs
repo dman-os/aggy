@@ -67,13 +67,13 @@ pub mod testing {
     use super::*;
     use once_cell::sync::Lazy;
 
-    pub const GRAM_01_ID: &'static str =
+    pub const GRAM_01_ID: &str =
         "fc6d9d817d53dee6c0ae00205e9f32f6373b23215ddd442a5dce193cce73f5925";
-    pub const GRAM_02_ID: &'static str =
+    pub const GRAM_02_ID: &str =
         "f35a356563678440efa1eb44e5cb2036e5e31b9eb6f04ef5df0c70966d5226b12";
-    pub const GRAM_03_ID: &'static str =
+    pub const GRAM_03_ID: &str =
         "f6affc96805b62f5a4c47b1ef2cf436910eb4df0253c7226d94406e6ab2771de5";
-    pub const GRAM_04_ID: &'static str =
+    pub const GRAM_04_ID: &str =
         "f64eb58f1ee950ea7519039eb39690bd56c94065301246cb5d572b703bdaa6421";
 
     pub static GRAM_01: Lazy<Gram> = Lazy::new(|| {
