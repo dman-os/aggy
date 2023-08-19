@@ -254,6 +254,7 @@ FROM gram
                     author_alias: row.author_alias,
                     sig: row.sig,
                     replies: default(),
+                    reply_count: Some(0),
                 }
             }
         };

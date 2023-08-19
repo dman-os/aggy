@@ -1,0 +1,70 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT \n    util.multibase_encode_hex(id) as \"id!\"\n    ,created_at\n    ,content\n    ,coty\n    ,util.multibase_encode_hex(parent_id) as \"parent_id?\"\n    ,util.multibase_encode_hex(sig) as \"sig!\"\n    ,util.multibase_encode_hex(author_pubkey) as \"author_pubkey!\"\n    ,author_alias as \"author_alias?\"\n    ,(\n        WITH RECURSIVE recurs AS (\n            SELECT id\n            FROM grams.grams\n            WHERE id = $1\n                UNION\n            SELECT g.id\n            FROM \n                grams.grams g\n                    INNER JOIN\n                recurs\n                    ON g.parent_id = recurs.id\n        )\n        SELECT COUNT(1) FROM recurs\n    ) as \"reply_count\"\nFROM grams.grams \nWHERE id = $1\n                ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 2,
+        "name": "content",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "coty",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "parent_id?",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "sig!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "author_pubkey!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "author_alias?",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 8,
+        "name": "reply_count",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Bytea"
+      ]
+    },
+    "nullable": [
+      null,
+      false,
+      false,
+      false,
+      null,
+      null,
+      null,
+      true,
+      null
+    ]
+  },
+  "hash": "1fdf2f1750663c9feeb6ec941af7951f6592979bf63f35dae15c7d5e8f975312"
+}
