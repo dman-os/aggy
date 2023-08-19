@@ -239,6 +239,7 @@ fn gen_grams() {
             author_alias: Some(seed.alias),
             sig,
             replies: default(),
+            reply_count: Some(0),
         }
     }
     fn seeds_to_gram(out: &mut Vec<Gram>, parent_id: Option<String>, seeds: Vec<Seed>) {

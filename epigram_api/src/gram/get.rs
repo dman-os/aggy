@@ -71,6 +71,7 @@ WITH RECURSIVE recurs AS (
     ,util.multibase_encode_hex(sig) as "sig"
     ,util.multibase_encode_hex(author_pubkey) as "author_pubkey"
     ,author_alias
+    ,NULL as "reply_count"
 FROM recurs 
                 "#,
                     )
@@ -128,7 +129,10 @@ FROM recurs
                     let mut root = arr[root_idx].take().expect_or_log("item at index was None");
                     collect_replies(&mut root, &mut arr, &mut filial_map)?;
                     debug_assert!(filial_map.is_empty());
-                    root
+                    Gram {
+                        reply_count: Some((arr.len() - 1) as i64),
+                        ..root
+                    }
                 } else {
                     let row = sqlx::query!(
                         r#"
@@ -141,6 +145,21 @@ SELECT
     ,util.multibase_encode_hex(sig) as "sig!"
     ,util.multibase_encode_hex(author_pubkey) as "author_pubkey!"
     ,author_alias as "author_alias?"
+    ,(
+        WITH RECURSIVE recurs AS (
+            SELECT id
+            FROM grams.grams
+            WHERE id = $1
+                UNION
+            SELECT g.id
+            FROM 
+                grams.grams g
+                    INNER JOIN
+                recurs
+                    ON g.parent_id = recurs.id
+        )
+        SELECT COUNT(1) FROM recurs
+    ) as "reply_count"
 FROM grams.grams 
 WHERE id = $1
                 "#,
@@ -166,6 +185,7 @@ WHERE id = $1
                         author_pubkey: row.author_pubkey,
                         author_alias: row.author_alias,
                         sig: row.sig,
+                        reply_count: Some(row.reply_count.unwrap().saturating_sub(1)),
                         replies: default(),
                     }
                 }
@@ -287,11 +307,12 @@ mod tests {
             uri: format!("/grams/{GRAM_01_ID}?includeReplies=true"),
             // auth_token: SERVICE.into(),
             status: StatusCode::OK,
-            check_json: serde_json::json!(*GRAM_01).remove_keys_from_obj(&["createdAt"]),
+            check_json: serde_json::json!(*GRAM_01).remove_keys_from_obj(&["createdAt", "replyCount"]),
             extra_assertions: &|EAArgs { test_cx, response_json, .. }| {
                 Box::pin(async move {
                     let resp_body_json = response_json.unwrap();
-                    assert!(dbg!(resp_body_json)["replies"].is_array());
+                    assert!(resp_body_json["replies"].is_array());
+                    assert_eq!(resp_body_json["replyCount"].as_i64(), Some(6));
                 })
             },
         },
@@ -299,11 +320,12 @@ mod tests {
             uri: format!("/grams/{GRAM_01_ID}"),
             // auth_token: SERVICE.into(),
             status: StatusCode::OK,
-            check_json: serde_json::json!(*GRAM_01).remove_keys_from_obj(&["createdAt"]),
+            check_json: serde_json::json!(*GRAM_01).remove_keys_from_obj(&["createdAt", "replyCount"]),
             extra_assertions: &|EAArgs { test_cx, response_json, .. }| {
                 Box::pin(async move {
                     let resp_body_json = response_json.unwrap();
                     assert!(resp_body_json["replies"].is_null());
+                    assert_eq!(resp_body_json["replyCount"].as_i64(), Some(6));
                 })
             },
         },

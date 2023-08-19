@@ -20,6 +20,7 @@ pub struct Gram {
     #[sqlx(skip)]
     #[schema(value_type = Option<Vec<Gram>>)]
     pub replies: Option<Vec<Gram>>,
+    pub reply_count: Option<i64>,
 }
 
 pub mod create;
@@ -85,7 +86,8 @@ pub mod testing {
         author_pubkey: "f4ea301616a42cfbbd03f33570038156065fc217a86cdcb993e9fb9b197d08b53".into(),
         author_alias: Some("use1".into()),
         sig: "f06a6016f64de7f22123816cc6a00db5c3d7d62da64fcb42daba234e2f6ecbc4ea6bb1671d035c3ffdbe6ed2a92dafbd5341f1d107557043b8d2fe018f17fbe0e".into(),
-        replies: default()
+        replies: default(),
+        reply_count: default(),
     }
     });
     pub static GRAM_02: Lazy<Gram> = Lazy::new(|| {
@@ -98,7 +100,8 @@ pub mod testing {
         author_pubkey: "fe90bb6e011ed9b2607b45c6917405f56b5c793168c578343e353cde94c4b6bed".into(),
         author_alias: Some("fideroth".into()),
         sig: "f519096262a6b214837dae999e8688d265bbed056207bc47fcf30e8a4b526b2bcd0e708f002f7c5d3ead38453a53a40735fb35fc56030902eb9a6eef03df66405".into(),
-        replies: default()
+        replies: default(),
+        reply_count: default(),
     }
     });
     pub static GRAM_03: Lazy<Gram> = Lazy::new(|| {
@@ -111,7 +114,8 @@ pub mod testing {
         author_pubkey: "f4ea301616a42cfbbd03f33570038156065fc217a86cdcb993e9fb9b197d08b53".into(),
         author_alias: Some("use1".into()),
         sig: "f9805011ae871eadbf5ab8e8501c2697731361ce11410d8afa9af696f89ce059f27dbce9bee77dc41e9fa4c44a7adfa02250e4f09911c7bd45302f846ebbeac0e".into(),
-        replies: default()
+        replies: default(),
+        reply_count: default(),
     }
     });
     pub static GRAM_04: Lazy<Gram> = Lazy::new(|| {
@@ -124,7 +128,8 @@ pub mod testing {
         author_pubkey: "fe90bb6e011ed9b2607b45c6917405f56b5c793168c578343e353cde94c4b6bed".into(),
         author_alias: Some("fideroth".into()),
         sig: "f8bc68f72d274ad8919a01a62e2b512175fec2be38211de1c760dcd775539f45da0509d725ee4171a8ff4d78a370ae179f857a3ff3c78da0f6cfb6bd9d076990b".into(),
-        replies: default()
+        replies: default(),
+        reply_count: default(),
     }
     });
 }
