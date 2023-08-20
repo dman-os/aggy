@@ -95,6 +95,7 @@ export const validators = {
   ).refine(obj => obj.url || obj.body, {
     message: "Either url or body must be present."
   }),
+  replyBody: oaAggy.endpoints.Reply.parameters.body.schema,
 }
 
 export type User = zod.infer<typeof validators.user>;
@@ -109,3 +110,4 @@ export type AuthenticateResponse = zod.infer<typeof validators.authenticateRespo
 export type UpdateSessionBody = zod.infer<typeof validators.updateSessionBody>;
 export type ListPostsQuery = zod.infer<typeof validators.listPostsQuery>;
 export type CreatePostBody = zod.infer<typeof validators.createPostBody>;
+export type ReplyBody = zod.infer<typeof validators.replyBody>;

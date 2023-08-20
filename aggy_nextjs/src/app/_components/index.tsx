@@ -1,9 +1,9 @@
 export * from './radix';
+export * from "./GramDetails"
 
 import Link from 'next/link';
 
 import * as T from "@/client/types";
-import * as Actions from "@/app/api/actions";
 import { apiClient } from '@/client/index.server';
 
 export async function PostStatusLines({ post, csrfToken }: { post: T.Post, csrfToken: string, }) {
@@ -17,7 +17,7 @@ export async function PostStatusLines({ post, csrfToken }: { post: T.Post, csrfT
       |
       <a href={`/p/${post.id}`}>{gram?.replyCount} comments</a>
     </div>
-    <div className="postStatusFacesLine flex gap-1">
+    {/* <div className="postStatusFacesLine flex gap-1">
       {Object.entries({ 'b': { count: 1, userFacedAt: null } }).map(([rxn, { count, userFacedAt: userFacedAtTs }]) =>
         <form
           key={post.id}
@@ -41,6 +41,8 @@ export async function PostStatusLines({ post, csrfToken }: { post: T.Post, csrfT
           </button>
         </form>
       )}
-    </div>
   </div>
+      */}
+  </div >
 }
+

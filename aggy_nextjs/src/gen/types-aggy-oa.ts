@@ -30,9 +30,6 @@ export const AuthenticateError = z.discriminatedUnion("error", [
   z.object({ error: z.literal("credentialsRejected") }).passthrough(),
   z.object({ message: z.string(), error: z.literal("internal") }).passthrough(),
 ]);
-export const Reply_Body = z
-  .object({ parentId: z.string().nullish(), body: z.string().min(1) })
-  .passthrough();
 export const Gram: z.ZodType<Gram> = z.lazy(() =>
   z
     .object({
@@ -303,7 +300,7 @@ export const endpoints = {
       body: {
         name: "body",
         type: "Body",
-        schema: Reply_Body,
+        schema: z.object({ body: z.string().min(1) }).passthrough(),
       },
       id: {
         name: "id",
@@ -550,7 +547,7 @@ export const endpoints = {
     errors: [
       {
         status: 400,
-        description: `Username occupied | Email occupied | Invalid input`,
+        description: `Invalid input | Email occupied | Username occupied`,
         schema: UpdateUserError,
       },
       {

@@ -56,7 +56,7 @@ export function RegisterForm({
                 Username is too short. Must be at least {T.MIN_LENGTH_USERNAME} chars long.
               </RadFMessage>
               <RadFMessage match="tooLong">
-                Username is too short. Can't be longeer {T.MAX_LENGTH_USERNAME} chars.
+                Username is too short. Can&apos;t be longeer {T.MAX_LENGTH_USERNAME} chars.
               </RadFMessage>
             </div>
           </RadFField>

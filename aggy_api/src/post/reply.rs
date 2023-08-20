@@ -8,6 +8,7 @@ pub struct Reply;
 pub struct Request {
     #[serde(skip)]
     pub auth_token: Option<BearerToken>,
+    #[serde(skip)]
     pub parent_id: Option<String>,
     #[schema(min_length = 1)]
     #[validate(length(min = 1))]

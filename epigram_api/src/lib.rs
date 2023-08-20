@@ -83,9 +83,7 @@ impl axum::extract::FromRef<SharedContext> for SharedServiceContext {
 // shadow_rs::shadow!(build);
 
 pub fn router(state: SharedContext) -> axum::Router {
-    axum::Router::new()
-        .merge(gram::router())
-        .with_state(state)
+    axum::Router::new().merge(gram::router()).with_state(state)
     // .merge(web::router().with_state(SharedServiceContext(ServiceContext(state))))
 }
 

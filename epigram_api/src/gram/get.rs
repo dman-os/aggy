@@ -85,7 +85,9 @@ FROM recurs
                         _ => common::internal_err!("db error: {err}"),
                     })?;
                     if rows.is_empty() {
-                        return Err(Error::NotFound { id: request.id.clone() });
+                        return Err(Error::NotFound {
+                            id: request.id.clone(),
+                        });
                     }
 
                     type OptVec = Vec<Option<Gram>>;
@@ -131,7 +133,7 @@ FROM recurs
                         root_idx.expect_or_log("requested gram not present in result set");
                     let mut root = arr[root_idx].take().expect_or_log("item at index was None");
                     collect_replies(&mut root, &mut arr, &mut filial_map)?;
-                    debug_assert!(filial_map.is_empty());
+                    debug_assert!(filial_map.is_empty(), "{filial_map:#?}");
                     Gram {
                         reply_count: Some((arr.len() - 1) as i64),
                         ..root
