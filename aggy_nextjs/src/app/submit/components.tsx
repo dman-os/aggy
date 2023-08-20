@@ -52,7 +52,7 @@ export function SumbitPostForm({
                 Title is missing.
               </RadFMessage>
               <RadFMessage match="tooLong">
-                Title is too short. Can't be longer than {T.MAX_LENGTH_TITLE}.
+                Title is too short. Can&apos;t be longer than {T.MAX_LENGTH_TITLE}.
               </RadFMessage>
             </div>
           </RadFField>

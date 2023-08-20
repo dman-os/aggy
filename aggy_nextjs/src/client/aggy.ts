@@ -175,6 +175,26 @@ export class AggyClient {
     const body = await response.json();
     return zodMustParse(T.validators.post, body);
   }
+
+  async reply(parentGramId: string, uncleanInput: T.ReplyBody, authToken: string,) {
+    const input = T.validators.replyBody.parse(uncleanInput);
+    const response = await fetch(
+      `${this.baseUrl}/grams/${parentGramId}/replies`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${authToken}`
+        },
+        body: JSON.stringify(input)
+      }
+    );
+    if (!response.ok) {
+      throw await AggyApiError.fromResponse(response);
+    }
+    const body = await response.json();
+    return zodMustParse(T.validators.gram, body);
+  }
 }
 
 export class AggyApiError extends Error {

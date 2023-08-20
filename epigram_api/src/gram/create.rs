@@ -352,10 +352,8 @@ mod tests {
 
     use ed25519_dalek::Signer;
 
-    const TEST_PRIVKEY: &str =
-        "f48cf7ffde6b73a4f5bc2749a335585d9750af7afc711063d85a104dc6c374e24";
-    const TEST_PUBKEY: &str =
-        "faecf2e46a2ae333aaf1a1ae8624d422bfcb57480ae25214b16bc12f03f32ff3e";
+    const TEST_PRIVKEY: &str = "f48cf7ffde6b73a4f5bc2749a335585d9750af7afc711063d85a104dc6c374e24";
+    const TEST_PUBKEY: &str = "faecf2e46a2ae333aaf1a1ae8624d422bfcb57480ae25214b16bc12f03f32ff3e";
 
     fn fixture_request() -> Request {
         serde_json::from_value(fixture_request_json()).unwrap()

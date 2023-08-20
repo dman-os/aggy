@@ -2,7 +2,7 @@
 
 ## To-do
 
-- [ ] Comment counts
+- [x] Comment counts
 - [ ] Markdown input and html sanitization
 - [ ] Stylization
   - [ ] Dark mode

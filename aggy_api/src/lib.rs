@@ -21,6 +21,7 @@ mod interlude {
     pub use sqlx::FromRow;
     pub use time::format_description::well_known::Iso8601;
     pub use time::OffsetDateTime;
+    pub use tracing::{debug, error, info, trace, warn};
     pub use utoipa::ToSchema;
     pub use uuid::Uuid;
     pub use validator::Validate;

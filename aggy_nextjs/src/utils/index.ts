@@ -12,3 +12,6 @@ export function assertNotNull<T>(value: T | undefined | null): T {
   }
   return value;
 }
+
+export type DePromisify<T> = T extends Promise<infer Inner> ? Inner : T;
+export type ActionErr<A extends (...args: any) => any> = DePromisify<ReturnType<A>> | undefined;

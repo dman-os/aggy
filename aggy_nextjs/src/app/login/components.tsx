@@ -1,12 +1,11 @@
 "use client"
 
+import { useState } from 'react';
+
 import { RadFControl, RadFField, RadFLabel, RadFMessage, RadFRoot, RadFSubmit } from "@/app/_components/radix"
 import { T } from "@/client";
 import { login } from './actions';
-import { useState } from 'react';
-
-type DePromisify<T> = T extends Promise<infer Inner> ? Inner : T;
-type ActionErr<A extends (...args: any) => any> = DePromisify<ReturnType<A>> | undefined;
+import { ActionErr } from '@/utils';
 
 export function LoginForm({
   redirectTo,
@@ -22,7 +21,8 @@ export function LoginForm({
       <RadFRoot asChild>
         <form
           action={async (formData) => setServerErr(await login(formData))}
-          className="flex flex-col gap-2">
+          className="flex flex-col gap-2"
+        >
           <input type="hidden" name="csrf_token" value={csrfToken} />
           {
             serverErr?.formError &&
