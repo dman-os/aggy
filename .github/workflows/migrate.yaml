@@ -19,3 +19,19 @@ jobs:
           -e FLYWAY_URL
           flyway/flyway:9.18-alpine 
           migrate -X
+  migrate-epigram-postgres:
+    name: Apply migrations for the epigram db
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 5
+    env:
+      FLYWAY_URL: jdbc:postgresql://${{ vars.EPIGRAM_PG_HOST }}:${{ vars.EPIGRAM_PG_PORT }}/${{ vars.EPIGRAM_PG_DB }}?user=${{ vars.EPIGRAM_PG_USER }}&password=${{ secrets.EPIGRAM_PG_PASS }}&sslmode=require
+    steps:
+      - uses: actions/checkout@v3
+      - run: >-
+          docker run --rm
+          -v ${{ github.workspace }}:/flyway/conf:ro
+          -v ${{ github.workspace }}/epigram_api/migrations:/flyway/sql:ro
+          -e FLYWAY_URL
+          flyway/flyway:9.18-alpine 
+          migrate -X

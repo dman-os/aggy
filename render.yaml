@@ -11,9 +11,11 @@ services:
     envVars:
       - key: AGGY_DATABASE_URL
         sync: false
+      - key: EPIGRAM_DATABASE_URL
+        sync: false
       - key: SERVICE_SECRET
         sync: false
       - key: AUTH_TOKEN_LIFESPAN_SECS
-        value: 900
+        value: 604800
       - key: WEB_SESSION_LIFESPAN_SECS
-        value: 900
+        value: 604800
