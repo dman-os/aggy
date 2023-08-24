@@ -9,6 +9,7 @@ members = [
   "aggy_api/",
   "epigram_api/",
   "doface_api/",
+  "qtrunk_api/",
 ]
 
 [workspace.package]
@@ -50,3 +51,4 @@ common = { path = "common/" }
 aggy_api = { path = "aggy_api/", default-features = false }
 doface_api = { path = "doface_api/", default-features = false }
 epigram_api = { path = "epigram_api/", default-features = false }
+qtrunk_api = { path = "qtrunk_api/", default-features = false }

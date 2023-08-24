@@ -521,62 +521,80 @@ macro_rules! integration_table_tests {
 #[macro_export]
 macro_rules! integration_table_tests_shorthand {
     (
-        $sname:ident,
-        $(uri: $suri:expr,)?
-        $(method: $smethod:expr,)?
-        $(status: $sstatus:expr,)?
-        $(router: $srouter:expr,)?
-        $(body: $sjson_body:expr,)?
-        $(check_json: $scheck_json:expr,)?
-        $(extra_assertions: $sextra_fn:expr,)?
+        $s_name:ident,
+        $(uri: $s_uri:expr,)?
+        $(method: $s_method:expr,)?
+        $(status: $s_status:expr,)?
+        $(router: $s_router:expr,)?
+        $(cx_fn: $s_cx_fn:expr,)?
+        $(body: $s_json_body:expr,)?
+        $(check_json: $s_check_json:expr,)?
+        $(auth_token: $s_auth_token:expr,)?
+        $(extra_assertions: $s_extra_fn:expr,)?
+        $(print_response: $s_print_res:expr,)?
     ) => {
         $crate::__with_dollar_sign! {
             ($d:tt) => {
-                macro_rules! $sname {
+                macro_rules! $s_name {
                     ($d (
                         $d name:ident: {
                             $d (uri: $d uri:expr,)?
                             $d (method: $d method:expr,)?
                             $d (status: $d status:expr,)?
                             $d (router: $d router:expr,)?
+                            $d (cx_fn: $d cx_fn:expr,)?
                             $d (body: $d json_body:expr,)?
                             $d (check_json: $d check_json:expr,)?
+                            $d (auth_token: $d auth_token:expr,)?
                             $d (extra_assertions: $d extra_fn:expr,)?
+                            $d (print_response: $d print_res:expr,)?
                         },
                     )*) => {
-                        mod $sname {
+                        mod $s_name {
                             #![ allow( unused_imports ) ]
                             use super::*;
                             $crate::integration_table_tests!{
                                 $d(
                                     $d name: {
-                                        optional_ident!(
-                                            $(uri: $suri,)?
+                                        $d crate::optional_token!(
                                             $d(uri: $d uri,)?
+                                            $(uri: $s_uri,)?
                                         );
-                                        optional_token!(
-                                            $(method: $smethod,)?
+                                        $crate::optional_token!(
+                                            $(method: $s_method,)?
                                             $d(check_json: $d method,)?
                                         );
-                                        optional_token!(
-                                            $(status: $sstatus,)?
+                                        $crate::optional_token!(
+                                            $(status: $s_status,)?
                                             $d(check_json: $d status,)?
                                         );
-                                        optional_token!(
-                                            $(router: $srouter,)?
-                                            $d(router: $d router,)?
+                                        $crate::optional_token!(
+                                            $(cx_fn: $s_router,)?
+                                            $d(cx_fn: $d router,)?
                                         );
-                                        optional_token!(
-                                            $(body: $sjson_body,)?
+                                        $crate::optional_token!(
+                                            $(cx_fn: $s_cx_fn,)?
+                                            $d(cx_fn: $d router,)?
+                                        );
+                                        $crate::optional_token!(
+                                            $(body: $s_json_body,)?
                                             $d(body: $d json_body,)?
                                         );
-                                        optional_token!(
-                                            $(check_json: $scheck_json,)?
+                                        $crate::optional_token!(
+                                            $(check_json: $s_check_json,)?
                                             $d(check_json: $d check_json,)?
                                         );
-                                        optional_token!(
-                                            $(extra_assertions: $sextra_fn,)?
+                                        $crate::optional_token!(
+                                            $(auth_token: $s_auth_token,)?
+                                            $d(auth_token: $d auth_token,)?
+                                        );
+                                        $crate::optional_token!(
+                                            $(extra_assertions: $s_extra_fn,)?
                                             $d(extra_assertions: $d extra_fn,)?
+                                        );
+                                        $crate::optional_token!(
+                                            $(print_res: $s_print_res,)?
+                                            $d(print_res: $d print_res,)?
                                         );
                                     },
                                 )*
@@ -588,6 +606,8 @@ macro_rules! integration_table_tests_shorthand {
         }
     }
 }
+/*
+* */
 
 #[cfg(test)]
 mod tests {
@@ -712,23 +732,23 @@ mod tests {
         },
     }
 
-    // crate::integration_table_tests_shorthand!{
-    //     integ_table_test_sum_short,
-    //     uri: "/sum",
-    //     method: "POST",
-    //     router: sum_router(),
-    // }
-    //
-    // integ_table_test_sum_short! {
-    //     succeeds: {
-    //         status: axum::http::StatusCode::OK,
-    //         body: serde_json::json!({ "a": 1, "b": 2 }),
-    //         check_json: serde_json::json!({ "c": 3  }),
-    //         extra_assertions: &|crate::utils::testing::EAArgs { .. }| {
-    //             Box::pin(async move {
-    //                 assert!(true);
-    //             })
-    //         },
-    //     },
-    // }
+    /* crate::integration_table_tests_shorthand! {
+        integ_table_test_sum_short,
+        uri: "/sum",
+        method: "POST",
+        router: sum_router(),
+    }
+
+    integ_table_test_sum_short! {
+        succeeds: {
+            status: axum::http::StatusCode::OK,
+            body: serde_json::json!({ "a": 1, "b": 2 }),
+            check_json: serde_json::json!({ "c": 3  }),
+            extra_assertions: &|crate::utils::testing::EAArgs { .. }| {
+                Box::pin(async move {
+                    assert!(true);
+                })
+            },
+        },
+    } */
 }

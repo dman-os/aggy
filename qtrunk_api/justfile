@@ -5,22 +5,17 @@ set dotenv-load
 default:
   @just --list --unsorted
 
-psql-neon:
-  podman-compose -f ./docker-compose.yml -f ./docker-compose.dev.yml \
-    exec postgres \
-    psql -h pg.neon.tech
-
 # psql from the db running in the compose launched pg container
 psql *ARGS:
   podman-compose -f ./docker-compose.yml -f ./docker-compose.dev.yml \
     exec postgres \
-    psql -U anf -d epigram {{ARGS}}
+    psql -U anf -d qtrunk {{ARGS}}
 
 # psql command but fit for redirects
 psql-tty *ARGS:
   podman-compose -f ./docker-compose.yml -f ./docker-compose.dev.yml \
     exec -T postgres \
-    psql -U anf -d epigram {{ARGS}}
+    psql -U anf -d qtrunk {{ARGS}}
 
 # The flyway cli tool
 flyway *ARGS:

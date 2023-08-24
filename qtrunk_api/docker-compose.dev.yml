@@ -1,0 +1,17 @@
+version: "3.9"
+
+services:
+  postgres:
+    container_name: qtrunk-postgres-server-dev
+    env_file:
+      - .env
+    ports:
+      - "5434:5432"
+  # redis:
+  #   profiles:
+  #     - disabled
+  #   container_name: qtrunk-redis-server-dev
+  #   env_file:
+  #     - .env
+  #   ports:
+  #     - "6379:6379"

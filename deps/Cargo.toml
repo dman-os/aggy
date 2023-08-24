@@ -10,10 +10,12 @@ path = "lib.rs"
 
 rand = "*"
 brotli = "*"
+data-encoding = "2.4"
 ed25519-dalek = { version = "2.0.0-rc.3", features = ["serde", "rand_core"] }
 argon2 = { package = "rust-argon2", version = "1.0.0" }
 blake3 = { version = "1.4" }
-data-encoding = "2.4"
+schnorrkel = { version = "0.10", features = ["serde"] }
+k256 = { version = "0.13", features = ["serde"] }
 
 regex = "1.6"
 # chrono = "0.4"
@@ -55,7 +57,7 @@ futures = "0.3"
 tokio = { version = "1", features = ["full", "parking_lot"] }
 tokio-stream = "0.1"
 
-axum = { version = "0.6.18", features = ["headers", "tracing"] }
+axum = { version = "0.6.18", features = ["headers", "tracing", "ws"] }
 tower = { version = "*", features = [] }
 tower-http = { version = "*", features = ["full"] }
 hyper = { version = "*", features = ["server", "tcp", "stream", "http1"] }
@@ -80,7 +82,14 @@ redis = { version = "0.23.0", features = [
   "connection-manager",
 ] }
 bb8-redis = "0.13.1"
-lettre = { version = "0.10.4", features = ["tokio1-rustls-tls", "serde", "tracing", "smtp-transport", "pool", "builder"], default-features = false }
+lettre = { version = "0.10.4", features = [
+  "tokio1-rustls-tls",
+  "serde",
+  "tracing",
+  "smtp-transport",
+  "pool",
+  "builder",
+], default-features = false }
 
 [build-dependencies]
 cargo_toml = "0.15.3"

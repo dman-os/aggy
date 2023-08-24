@@ -128,7 +128,7 @@ fn validate_request(
                 validator::ValidationError {
                     code: Cow::Borrowed("invalid_sig"),
                     message: Some(Cow::Borrowed(
-                        "Provided sig was invalid. Expecting ed25519 hash of the id.",
+                        "Provided sig was invalid. Expecting ed25519 sig of the id.",
                     )),
                     params: [(std::borrow::Cow::from("value"), serde_json::json!(req.sig))]
                         .into_iter()
@@ -235,14 +235,10 @@ FROM gram
                             "grams_parent_id_fkey" => Error::ParentNotFound {
                                 id: request.parent_id.unwrap(),
                             },
-                            _ => Error::Internal {
-                                message: format!("db error: {err}"),
-                            },
+                            _ => common::internal_err!("db error: {err}"),
                         }
                     }
-                    _ => Error::Internal {
-                        message: format!("db error: {err}"),
-                    },
+                    _ => common::internal_err!("db error: {err}"),
                 })?;
                 Gram {
                     id: row.id,
