@@ -1,0 +1,19 @@
+[package]
+name = "qtrunk"
+version.workspace = true
+edition.workspace = true
+
+[features]
+default = ["dylink"]
+
+[dependencies]
+deps = { workspace = true }
+dylink = { workspace = true, optional = true }
+common = { workspace = true }
+
+shadow-rs = { workspace = true }
+validator = { workspace = true }
+sqlx = { workspace = true }
+
+[build-dependencies]
+shadow-rs = { workspace = true }

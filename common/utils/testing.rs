@@ -319,11 +319,11 @@ pub fn check_json(
 ) {
     use serde_json::Value::*;
     match (check, json) {
-        (Array(r_arr), Array(arr)) => {
-            for ii in 0..arr.len() {
+        (Array(check), Array(response)) => {
+            for ii in 0..check.len() {
                 check_json(
-                    (&format!("{check_name}[{ii}]"), &r_arr[ii]),
-                    (&format!("{json_name}[{ii}]"), &arr[ii]),
+                    (&format!("{check_name}[{ii}]"), &check[ii]),
+                    (&format!("{json_name}[{ii}]"), &response[ii]),
                 );
             }
         }

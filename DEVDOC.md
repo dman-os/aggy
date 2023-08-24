@@ -21,6 +21,7 @@
 - [ ] Use camel case error field codes in ValidationErrors
 
 - [ ] Consider SurrealDb
+- [ ] Conside shuttle.rs
 
 - [x] Move to flywaydb for migrations
 
