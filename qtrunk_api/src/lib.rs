@@ -40,7 +40,6 @@ use interlude::*;
 
 pub mod connect;
 pub mod event;
-pub mod publish;
 pub mod utils;
 
 use crate::utils::*;
