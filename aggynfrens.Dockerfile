@@ -1,10 +1,11 @@
 # TODO: build as release for prod
-FROM docker.io/library/rust:1.70-slim AS chef
+FROM docker.io/library/rust:1.72-slim AS chef
 
 WORKDIR /srv/app
 
 ENV RUSTFLAGS="--cfg uuid_unstable"
-RUN cargo install cargo-chef --debug --locked
+RUN curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
+RUN cargo binstall cargo-chef -y
 
 # # this is required by the build script of openssl-sys
 # RUN apt-get update && apt-get install -y \
@@ -30,7 +31,7 @@ ENV SQLX_OFFLINE=true
 # RUN cargo build --release --no-default-features 
 RUN cargo build -p aggynfrens_api --no-default-features
 
-FROM docker.io/library/debian:buster-slim as runtime
+FROM docker.io/library/rust:1.72:slim as runtime
 WORKDIR /srv/app
 # COPY --from=builder /srv/app/target/debug/web /srv/app/target/debug/worker /usr/local/bin/
 COPY --from=builder /srv/app/target/debug/aggynfrens_api /usr/local/bin/
