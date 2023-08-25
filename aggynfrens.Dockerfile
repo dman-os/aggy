@@ -4,6 +4,12 @@ FROM docker.io/library/rust:1.72-slim AS chef
 WORKDIR /srv/app
 
 ENV RUSTFLAGS="--cfg uuid_unstable"
+
+RUN apt-get update && apt-get install -y \
+  curl \
+  #   pkgconf \
+  && rm -rf /var/lib/apt/lists/*
+
 RUN curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
 RUN cargo binstall cargo-chef -y
 
