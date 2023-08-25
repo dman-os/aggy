@@ -118,6 +118,9 @@ fn main() {
                             tower_http::trace::DefaultOnFailure::new()
                                 .level(tracing::Level::ERROR)
                                 .latency_unit(tower_http::LatencyUnit::Micros),
+                        )
+                        .make_span_with(
+                            tower_http::trace::DefaultMakeSpan::new().include_headers(true),
                         ),
                 );
 

@@ -21,4 +21,8 @@
 !epigram_api/src
 !epigram_api/migrations
 
+!qtrunk_api/Cargo.toml
+!qtrunk_api/src
+!qtrunk_api/migrations
+
 !.sqlx

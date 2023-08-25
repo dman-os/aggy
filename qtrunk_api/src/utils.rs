@@ -1,7 +1,7 @@
 pub mod testing {
+    use crate::interlude::*;
 
     use common::utils::testing::{TestContext, TestDb};
-    use deps::*;
 
     pub const SERVICE_SECRET: &str = "public square";
 
@@ -28,6 +28,7 @@ pub mod testing {
                 web_session_lifespan: time::Duration::seconds_f64(60. * 60. * 24. * 30.),
                 service_secret: SERVICE_SECRET.to_string(),
             },
+            sw: default(),
         })
     }
 

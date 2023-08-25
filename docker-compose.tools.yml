@@ -2,7 +2,7 @@ version: "3.9"
 
 services:
   flyway:
-    image: docker.io/flyway/flyway:9.18-alpine
+    image: docker.io/flyway/flyway:9.21-alpine
     container_name: flyway
     profiles:
       - tools

@@ -61,6 +61,7 @@ axum = { version = "0.6.18", features = ["headers", "tracing", "ws"] }
 tower = { version = "*", features = [] }
 tower-http = { version = "*", features = ["full"] }
 hyper = { version = "*", features = ["server", "tcp", "stream", "http1"] }
+tokio-tungstenite = { version = "*", features = ["rustls-tls-webpki-roots"] }
 
 utoipa = { version = "3.3", features = [
   "debug",
