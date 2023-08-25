@@ -31,7 +31,7 @@ ENV SQLX_OFFLINE=true
 # RUN cargo build --release --no-default-features 
 RUN cargo build -p aggynfrens_api --no-default-features
 
-FROM docker.io/library/rust:1.72:slim as runtime
+FROM docker.io/library/rust:1.72-slim AS runtime
 WORKDIR /srv/app
 # COPY --from=builder /srv/app/target/debug/web /srv/app/target/debug/worker /usr/local/bin/
 COPY --from=builder /srv/app/target/debug/aggynfrens_api /usr/local/bin/
