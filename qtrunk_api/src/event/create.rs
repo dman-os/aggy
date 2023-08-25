@@ -3,7 +3,7 @@ use crate::interlude::*;
 use crate::event::Event;
 
 #[derive(Debug, Clone)]
-pub struct Publish;
+pub struct CreateEvent;
 
 pub type Request = Event;
 
@@ -168,7 +168,7 @@ impl Error {
 }
 
 #[async_trait::async_trait]
-impl Endpoint for Publish {
+impl Endpoint for CreateEvent {
     type Request = Request;
     type Response = Response;
     type Error = Error;
@@ -311,7 +311,7 @@ mod tests {
         validate,
         (request, err_field),
         {
-            match crate::publish::validate_request(&request) {
+            match crate::event::create::validate_request(&request) {
                 Ok(_) => {
                     if let Some(err_field) = err_field {
                         panic!("validation succeeded, was expecting err on field: {err_field}");
@@ -406,7 +406,7 @@ mod tests {
             let (mut testing, cx) = crate::utils::testing::cx_fn(common::function_full!()).await;
             {
                 let event = serde_json::from_value(request_json).unwrap();
-                let ok = match crate::publish::Publish.handle(&cx, event).await{
+                let ok = match crate::event::create::CreateEvent.handle(&cx, event).await{
                     Ok(value) => value.to_nostr_ok(),
                     Err(value) => value.to_nostr_ok(),
                 };

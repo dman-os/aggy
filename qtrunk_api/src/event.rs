@@ -1,5 +1,9 @@
 use crate::interlude::*;
 
+use std::collections::HashMap;
+
+use serde_json::Value;
+
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(crate = "serde")]
 pub struct Event {
@@ -7,10 +11,47 @@ pub struct Event {
     pub pubkey: String,
     #[serde(with = "time::serde::timestamp")]
     pub created_at: OffsetDateTime,
+    // #[sqlx(try_from = "i64")]
     pub kind: u16,
+    // #[sqlx(try_from = "serde_json::Value")]
     pub tags: Vec<Vec<String>>,
     pub content: String,
     pub sig: String,
+}
+
+impl FromRow<'_, sqlx::postgres::PgRow> for Event {
+    fn from_row(row: &sqlx::postgres::PgRow) -> Result<Self, sqlx::Error> {
+        use sqlx::Row;
+        let tags: Value = row.try_get("tags")?;
+        let tags = match serde_json::from_value(tags) {
+            Ok(val) => val,
+            Err(err) => {
+                return Err(sqlx::Error::ColumnDecode {
+                    index: "tags".into(),
+                    source: err.into(),
+                })
+            }
+        };
+        let kind: i32 = row.try_get("kind")?;
+        let kind = match kind.try_into() {
+            Ok(val) => val,
+            Err(err) => {
+                return Err(sqlx::Error::ColumnDecode {
+                    index: "kind".into(),
+                    source: eyre::eyre!("kind doesn't fit in u16: {err}").into(),
+                })
+            }
+        };
+        Ok(Self {
+            id: row.try_get("id")?,
+            pubkey: row.try_get("pubkey")?,
+            created_at: row.try_get("created_at")?,
+            content: row.try_get("content")?,
+            sig: row.try_get("sig")?,
+            kind,
+            tags,
+        })
+    }
 }
 
 pub fn id_for_event(
@@ -62,6 +103,95 @@ pub fn hex_id_and_sig_for_event(
     let sig = data_encoding::HEXLOWER.encode(&sig.to_bytes()[..]);
     (id, sig)
 }
+
+#[derive(Debug)]
+pub struct Filter {
+    pub ids: Option<Vec<String>>,
+    pub authors: Option<Vec<String>>,
+    pub kinds: Option<Vec<u16>>,
+    pub since: Option<OffsetDateTime>,
+    pub until: Option<OffsetDateTime>,
+    pub limit: Option<usize>,
+    pub tags: Option<HashMap<char, Vec<String>>>,
+}
+
+impl<'de> Deserialize<'de> for Filter {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        #[serde(crate = "serde")]
+        pub struct Inner {
+            pub ids: Option<Vec<String>>,
+            pub authors: Option<Vec<String>>,
+            pub kinds: Option<Vec<u16>>,
+            // #[serde(with = "time::serde::timestamp::option")]
+            pub since: Option<i64>,
+            // #[serde(with = "time::serde::timestamp::option")]
+            pub until: Option<i64>,
+            pub limit: Option<usize>,
+        }
+        let json: serde_json::Map<String, Value> = Deserialize::deserialize(deserializer)?;
+        let mut tags: HashMap<char, Vec<String>> = default();
+        for (key, val) in json.iter() {
+            if key.starts_with('#') {
+                let tag = &key[1..];
+                let mut iter = tag.chars();
+                let Some(tag) = iter.next() else {
+                    return Err(
+                        serde::de::Error::invalid_value(
+                        serde::de::Unexpected::Str(&key[..]),
+                        &"a single char tag"
+                        )
+                    );
+                };
+                // we're only interested in single char tags
+                if iter.next().is_some() {
+                    return Err(serde::de::Error::invalid_value(
+                        serde::de::Unexpected::Str(&key[..]),
+                        &"a single char tag",
+                    ));
+                }
+                // FIXME: unnecessary clone
+                let val: Vec<String> = serde_json::from_value(val.clone()).map_err(|err| {
+                    serde::de::Error::custom(format!("invalid tag filter: {key} -> {val} | {err}"))
+                })?;
+                tags.insert(tag, val);
+            }
+        }
+        let inner: Inner = serde_json::from_value(Value::Object(json))
+            .map_err(|err| serde::de::Error::custom(format!("invalid filter: {err}")))?;
+        Ok(Self {
+            ids: inner.ids,
+            kinds: inner.kinds,
+            since: match inner.since {
+                Some(ts) => Some(OffsetDateTime::from_unix_timestamp(ts).map_err(|err| {
+                    serde::de::Error::invalid_value(
+                        serde::de::Unexpected::Signed(ts),
+                        &"a avlid utc unix timestamp",
+                    )
+                })?),
+                None => None,
+            },
+            until: match inner.until {
+                Some(ts) => Some(OffsetDateTime::from_unix_timestamp(ts).map_err(|err| {
+                    serde::de::Error::invalid_value(
+                        serde::de::Unexpected::Signed(ts),
+                        &"a avlid utc unix timestamp",
+                    )
+                })?),
+                None => None,
+            },
+            limit: inner.limit,
+            authors: inner.authors,
+            tags: Some(tags),
+        })
+    }
+}
+
+pub mod create;
+pub mod list;
 
 pub mod testing {
     use super::*;

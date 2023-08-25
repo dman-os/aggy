@@ -7,20 +7,31 @@ use axum::extract::{
 use futures::{sink::SinkExt, stream::StreamExt};
 use serde_json::Value;
 use std::collections::HashMap;
-use tokio::sync::mpsc::Sender;
+use tokio::{sync::mpsc::Sender, sync::RwLock};
 
-#[derive(Debug, Clone)]
+use crate::event::Filter;
+
+#[derive(Debug)]
+pub struct Subscription {
+    id: Uuid,
+    client_id: String,
+    filter: Filter,
+}
+
+#[derive(Debug)]
 pub struct Client {
     id: Uuid,
     connected_at: OffsetDateTime,
     addr: std::net::SocketAddr,
+    subs: RwLock<Vec<Subscription>>,
+    tx: Sender<Value>,
 }
 
 #[derive(Default, educe::Educe)]
 #[educe(Debug)]
 pub struct Switchboard {
     #[educe(Debug(ignore))]
-    lines: HashMap<Uuid, Sender<Vec<Value>>>,
+    clients: RwLock<HashMap<Uuid, Client>>,
 }
 
 pub async fn handler(
@@ -28,25 +39,30 @@ pub async fn handler(
     ConnectInfo(addr): ConnectInfo<std::net::SocketAddr>,
     ws: WebSocketUpgrade,
 ) -> impl IntoResponse {
-    ws.on_upgrade(move |socket| {
-        handle_client(
-            cx,
-            socket,
-            Client {
-                id: Uuid::new_v4(),
-                addr,
-                connected_at: OffsetDateTime::now_utc(),
-            },
-        )
-    })
+    // tokio::sync::RwLock<>
+    ws.on_upgrade(move |socket| handle_client(cx, socket, addr))
 }
 
-async fn handle_client(cx: SharedContext, socket: WebSocket, client: Client) {
+async fn handle_client(cx: SharedContext, socket: WebSocket, addr: std::net::SocketAddr) {
     // the web socket pipes
     let (mut ws_tx, mut ws_rx) = socket.split();
     // the switchboard pipes
     let (sw_tx, mut sw_rx) = tokio::sync::mpsc::channel::<Value>(32);
     let (close_tx, mut close_rx) = tokio::sync::mpsc::channel::<(u16, String)>(1);
+    let id = Uuid::new_v4();
+    {
+        let mut clients = cx.sw.clients.write().await;
+        clients.insert(
+            id,
+            Client {
+                id,
+                addr,
+                connected_at: OffsetDateTime::now_utc(),
+                subs: default(),
+                tx: sw_tx.clone(),
+            },
+        );
+    }
     let mut tx_task = tokio::spawn(async move {
         'sel: loop {
             tokio::select! {
@@ -71,44 +87,48 @@ async fn handle_client(cx: SharedContext, socket: WebSocket, client: Client) {
             }
         }
     });
-    let mut rx_task = tokio::spawn(async move {
-        while let Some(Ok(msg)) = ws_rx.next().await {
-            let mut msg: Vec<Value> = match msg {
-                WsMsg::Text(str) => serde_json::from_str(&str)
-                    .map_err(|err| eyre::eyre!("unexpected msg recieved: {err} | {str}"))?,
-                WsMsg::Binary(buf) => serde_json::from_slice(&buf[..])
-                    .map_err(|err| eyre::eyre!("unexpected msg recieved: {err}"))?,
-                // end the loop on close
-                WsMsg::Close(_) => break,
-                _ => continue,
-            };
-            // process the msg as per NIP-01
-            let Some(kind) = msg[0].as_str() else {
+    let mut rx_task = {
+        let cx2 = cx.clone();
+        tokio::spawn(async move {
+            let cx = cx2;
+            while let Some(Ok(msg)) = ws_rx.next().await {
+                let mut msg: Vec<Value> = match msg {
+                    WsMsg::Text(str) => serde_json::from_str(&str)
+                        .map_err(|err| eyre::eyre!("unexpected msg recieved: {err} | {str}"))?,
+                    WsMsg::Binary(buf) => serde_json::from_slice(&buf[..])
+                        .map_err(|err| eyre::eyre!("unexpected msg recieved: {err}"))?,
+                    // end the loop on close
+                    WsMsg::Close(_) => break,
+                    _ => continue,
+                };
+                // process the msg as per NIP-01
+                let Some(kind) = msg[0].as_str() else {
                 return Err(eyre::eyre!("invalid msg recieved: {msg:?}"));
             };
-            match kind {
-                "EVENT" if msg.len() == 2 => {
-                    let event = serde_json::from_value(msg.pop().unwrap())
-                        .map_err(|err| eyre::eyre!("unexpected msg recieved: {err}"))?;
-                    let res = crate::publish::Publish.handle(&cx, event).await;
-                    let res = match res {
-                        Ok(ok) => ok.to_nostr_ok(),
-                        Err(err) => err.to_nostr_ok(),
-                    };
-                    sw_tx.send(res).await.unwrap_or_log();
+                match kind {
+                    "EVENT" if msg.len() == 2 => {
+                        let event = serde_json::from_value(msg.pop().unwrap())
+                            .map_err(|err| eyre::eyre!("unexpected msg recieved: {err}"))?;
+                        let res = crate::event::create::CreateEvent.handle(&cx, event).await;
+                        let res = match res {
+                            Ok(ok) => ok.to_nostr_ok(),
+                            Err(err) => err.to_nostr_ok(),
+                        };
+                        sw_tx.send(res).await.unwrap_or_log();
+                    }
+                    "REQ" => todo!(),
+                    "ClOSE" => todo!(),
+                    _ => return Err(eyre::eyre!("invalid msg recieved: {msg:?}")),
                 }
-                "REQ" => todo!(),
-                "ClOSE" => todo!(),
-                _ => return Err(eyre::eyre!("invalid msg recieved: {msg:?}")),
             }
-        }
-        Ok::<_, eyre::Report>(())
-    });
+            Ok::<_, eyre::Report>(())
+        })
+    };
     tokio::select! {
         res = (&mut tx_task) => {
             match res {
                 Ok(()) => {},
-                Err(err) => debug!(?err, ?client, "error in client send loop"),
+                Err(err) => debug!(?err, ?id, ?addr, "error in client send loop"),
             }
             rx_task.abort();
         }
@@ -124,6 +144,10 @@ async fn handle_client(cx: SharedContext, socket: WebSocket, client: Client) {
             }
             tx_task.abort();
         }
+    }
+    {
+        let mut clients = cx.sw.clients.write().await;
+        clients.remove(&id);
     }
 }
 
@@ -173,7 +197,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn sample() -> eyre::Result<()> {
+    async fn suite() -> eyre::Result<()> {
         common::utils::testing::setup_tracing_once();
         use tokio_tungstenite::tungstenite::Message as WsMsg;
         let (testing, cx) = crate::utils::testing::cx_fn(common::function_full!()).await;
