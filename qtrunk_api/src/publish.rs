@@ -131,7 +131,7 @@ pub struct Response {
     id: String,
 }
 impl Response {
-    fn to_nostr_ok(self) -> serde_json::Value {
+    pub fn to_nostr_ok(self) -> serde_json::Value {
         let Self { id } = self;
         json!(["OK", id, true,])
     }
@@ -161,7 +161,7 @@ pub enum ErrorKind {
 }
 
 impl Error {
-    fn to_nostr_ok(self) -> serde_json::Value {
+    pub fn to_nostr_ok(self) -> serde_json::Value {
         let Self { event_id, kind } = self;
         json!(["OK", event_id, false, format!("{kind}")])
     }

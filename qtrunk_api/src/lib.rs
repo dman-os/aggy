@@ -16,6 +16,7 @@ mod interlude {
     pub use std::borrow::Cow;
     pub use time::format_description::well_known::Iso8601;
     pub use time::OffsetDateTime;
+    pub use tracing::{debug, error, info, trace, warn};
     pub use utoipa::ToSchema;
     pub use uuid::Uuid;
     pub use validator::Validate;
@@ -37,6 +38,7 @@ mod interlude {
 }
 use interlude::*;
 
+pub mod connect;
 pub mod event;
 pub mod publish;
 pub mod utils;
@@ -58,6 +60,7 @@ pub struct Config {
 pub struct Context {
     pub config: Config,
     pub db: Db,
+    pub sw: connect::Switchboard,
 }
 
 #[derive(Debug)]
@@ -85,9 +88,8 @@ impl axum::extract::FromRef<SharedContext> for SharedServiceContext {
 
 pub fn router(state: SharedContext) -> axum::Router {
     axum::Router::new()
-        // .merge(gram::router())
+        .route("/", axum::routing::get(connect::handler))
         .with_state(state)
-    // .merge(web::router().with_state(SharedServiceContext(ServiceContext(state))))
 }
 
 pub struct ApiDoc;
