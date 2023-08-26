@@ -7,24 +7,18 @@
 !dylink
 !xtask
 !common
+!aggynfrens_api
 
 !aggy_api/Cargo.toml
-!doface_api/build.rs
 !aggy_api/src
 !aggy_api/migrations
 
 !doface_api/Cargo.toml
-!doface_api/build.rs
 !doface_api/src
 !doface_api/migrations
 
 !epigram_api/Cargo.toml
-!epigram_api/build.rs
 !epigram_api/src
 !epigram_api/migrations
-
-!aggynfrens_api/Cargo.toml
-!aggynfrens_api/build.rs
-!aggynfrens_api/src
 
 !.sqlx
