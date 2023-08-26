@@ -1,5 +1,5 @@
 # TODO: build as release for prod
-FROM docker.io/library/rust:1.72-slim AS chef
+FROM docker.io/library/rust:1.72 AS chef
 
 WORKDIR /srv/app
 
@@ -37,7 +37,7 @@ ENV SQLX_OFFLINE=true
 # RUN cargo build --release --no-default-features 
 RUN cargo build -p aggynfrens_api --no-default-features
 
-FROM docker.io/library/rust:1.72-slim AS runtime
+FROM docker.io/library/rust:1.72 AS runtime
 WORKDIR /srv/app
 # COPY --from=builder /srv/app/target/debug/web /srv/app/target/debug/worker /usr/local/bin/
 COPY --from=builder /srv/app/target/debug/aggynfrens_api /usr/local/bin/
