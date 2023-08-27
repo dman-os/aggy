@@ -8,6 +8,7 @@ path = "lib.rs"
 
 [dependencies]
 
+ahash = { version = "0.8", features = ["serde"] }
 rand = "*"
 brotli = "*"
 data-encoding = "2.4"

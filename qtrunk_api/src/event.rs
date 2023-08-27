@@ -104,7 +104,7 @@ pub fn hex_id_and_sig_for_event(
     (id, sig)
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Filter {
     pub ids: Option<Vec<String>>,
     pub authors: Option<Vec<String>>,
@@ -166,7 +166,7 @@ impl<'de> Deserialize<'de> for Filter {
             ids: inner.ids,
             kinds: inner.kinds,
             since: match inner.since {
-                Some(ts) => Some(OffsetDateTime::from_unix_timestamp(ts).map_err(|err| {
+                Some(ts) => Some(OffsetDateTime::from_unix_timestamp(ts).map_err(|_| {
                     serde::de::Error::invalid_value(
                         serde::de::Unexpected::Signed(ts),
                         &"a avlid utc unix timestamp",
@@ -175,10 +175,10 @@ impl<'de> Deserialize<'de> for Filter {
                 None => None,
             },
             until: match inner.until {
-                Some(ts) => Some(OffsetDateTime::from_unix_timestamp(ts).map_err(|err| {
+                Some(ts) => Some(OffsetDateTime::from_unix_timestamp(ts).map_err(|_| {
                     serde::de::Error::invalid_value(
                         serde::de::Unexpected::Signed(ts),
-                        &"a avlid utc unix timestamp",
+                        &"a valid utc unix timestamp",
                     )
                 })?),
                 None => None,

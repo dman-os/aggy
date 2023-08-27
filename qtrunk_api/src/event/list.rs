@@ -5,7 +5,7 @@ use super::{Event, Filter};
 #[derive(Clone, Copy, Debug)]
 pub struct ListEvents;
 
-pub type Request = Filter;
+pub type Request = Vec<Filter>;
 
 pub type Response = Vec<Event>;
 
@@ -35,10 +35,11 @@ impl crate::Endpoint for ListEvents {
         request: Self::Request,
     ) -> Result<Self::Response, Self::Error> {
         // let limit = request.limit.unwrap_or(100);
-        let items = match &cx.db {
-            crate::Db::Pg { db_pool } => {
-                let rows = sqlx::query(
-                    r#"
+        let items = if request.is_empty() {
+            match &cx.db {
+                crate::Db::Pg { db_pool } => {
+                    let rows = sqlx::query(
+                        r#"
 SELECT
     encode(id, 'hex') as "id"
     ,encode(pubkey, 'hex') as "pubkey"
@@ -49,16 +50,19 @@ SELECT
     ,encode(sig, 'hex') as "sig"
 FROM events
         "#,
-                )
-                .fetch_all(db_pool)
-                .await
-                .map_err(|err| common::internal_err!("db err: {err}"))?;
+                    )
+                    .fetch_all(db_pool)
+                    .await
+                    .map_err(|err| common::internal_err!("db err: {err}"))?;
 
-                rows.iter()
-                    .map(Event::from_row)
-                    .collect::<Result<Vec<_>, _>>()
-                    .map_err(|err| common::internal_err!("row mapping err: {err}"))?
+                    rows.iter()
+                        .map(Event::from_row)
+                        .collect::<Result<Vec<_>, _>>()
+                        .map_err(|err| common::internal_err!("row mapping err: {err}"))?
+                }
             }
+        } else {
+            todo!()
         };
         Ok(items)
         /* let result = sqlx::query(
@@ -125,7 +129,7 @@ mod tests {
     }
 
     fn fixture_request_json() -> serde_json::Value {
-        json!({})
+        json!([])
     }
 
     #[tokio::test]
@@ -133,7 +137,7 @@ mod tests {
         common::utils::testing::setup_tracing_once();
         let (testing, cx) = crate::utils::testing::cx_fn(common::function_full!()).await;
         {
-            let filter = json!({});
+            let filter = fixture_request_json();
             let filter = serde_json::from_value(filter).unwrap();
             let ok = crate::event::list::ListEvents.handle(&cx, filter).await?;
             assert_eq!(ok.len(), 5, "{ok:?}");
