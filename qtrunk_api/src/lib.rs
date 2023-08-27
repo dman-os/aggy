@@ -23,9 +23,9 @@ mod interlude {
 
     pub use common::utils::default;
     pub use common::{
-        utils::ValidationErrors, AuthedUid, AuthenticatedEndpoint, Authorize, DocumentedEndpoint,
-        Endpoint, EndpointWrapper, ErrorResponse, HttpEndpoint, HttpResponse, Method, Ref,
-        StatusCode, Tag,
+        utils::{CHeapStr, ValidationErrors},
+        AuthedUid, AuthenticatedEndpoint, Authorize, DocumentedEndpoint, Endpoint, EndpointWrapper,
+        ErrorResponse, HttpEndpoint, HttpResponse, Method, Ref, StatusCode, Tag,
     };
 
     pub type BearerToken = axum::headers::Authorization<axum::headers::authorization::Bearer>;

@@ -13,9 +13,8 @@ use crate::event::Filter;
 
 #[derive(Debug)]
 pub struct Subscription {
-    id: Uuid,
-    client_id: String,
-    filter: Filter,
+    id: CHeapStr,
+    filters: Vec<Filter>,
 }
 
 #[derive(Debug)]
@@ -80,7 +79,7 @@ async fn handle_client(cx: SharedContext, socket: WebSocket, addr: std::net::Soc
                     };
                     ws_tx
                         // TODO: consider using feed here
-                        .send(WsMsg::Binary(serde_json::to_vec(&msg).unwrap_or_log()))
+                        .send(WsMsg::Text(serde_json::to_string(&msg).unwrap_or_log()))
                         .await
                         .unwrap_or_log()
                 }
@@ -103,12 +102,15 @@ async fn handle_client(cx: SharedContext, socket: WebSocket, addr: std::net::Soc
                 };
                 // process the msg as per NIP-01
                 let Some(kind) = msg[0].as_str() else {
-                return Err(eyre::eyre!("invalid msg recieved: {msg:?}"));
-            };
+                    return Err(eyre::eyre!("invalid msg recieved: {msg:?}"));
+                };
                 match kind {
                     "EVENT" if msg.len() == 2 => {
-                        let event = serde_json::from_value(msg.pop().unwrap())
-                            .map_err(|err| eyre::eyre!("unexpected msg recieved: {err}"))?;
+                        let event = serde_json::from_value(msg.pop().unwrap()).map_err(|err| {
+                            eyre::eyre!(
+                                "unexpected msg recieved: invalid EVENT msg {msg:?} | {err}"
+                            )
+                        })?;
                         let res = crate::event::create::CreateEvent.handle(&cx, event).await;
                         let res = match res {
                             Ok(ok) => ok.to_nostr_ok(),
@@ -116,8 +118,77 @@ async fn handle_client(cx: SharedContext, socket: WebSocket, addr: std::net::Soc
                         };
                         sw_tx.send(res).await.unwrap_or_log();
                     }
-                    "REQ" => todo!(),
-                    "ClOSE" => todo!(),
+                    "REQ" if msg.len() >= 3 => {
+                        let sub_id = msg[1].as_str().ok_or_else(|| {
+                            eyre::eyre!("invalid REQ msg: invalid subscription id on {msg:?}")
+                        })?;
+                        let filters = msg[2..]
+                            .iter()
+                            .map(|val| {
+                                serde_json::from_value(val.clone()).map_err(|err| {
+                                    eyre::eyre!(
+                                        "invalid REQ msg: invalid filter on {msg:?} | {err}"
+                                    )
+                                })
+                            })
+                            .collect::<Result<Vec<Filter>, _>>()?;
+                        let events = crate::event::list::ListEvents
+                            .handle(&cx, filters.clone())
+                            .await
+                            .map_err(|err| match err {
+                                crate::event::list::Error::InvalidInput { issues } => {
+                                    eyre::eyre!("error during initial list for REQ: {issues}")
+                                }
+                                err => Err(err).unwrap_or_log(),
+                            })?;
+                        for event in events {
+                            sw_tx
+                                .send(json!(["EVENT", sub_id, event]))
+                                .await
+                                .unwrap_or_log();
+                        }
+                        sw_tx.send(json!(["EOSE", sub_id])).await.unwrap_or_log();
+
+                        let clients = cx.sw.clients.read().await;
+                        let client = clients.get(&id).expect_or_log("client not found under id");
+                        let mut subs = client.subs.write().await;
+
+                        let sub_id = CHeapStr::new(sub_id.to_string());
+                        if let Some(sub) = subs.iter_mut().find(|sub| sub.id == sub_id) {
+                            sub.filters = filters;
+                        } else {
+                            subs.push(Subscription {
+                                id: sub_id,
+                                filters,
+                            });
+                        }
+                    }
+                    "CLOSE" if msg.len() == 2 => {
+                        let sub_id = msg[1].as_str().ok_or_else(|| {
+                            eyre::eyre!("invalid CLOSE msg: invalid subscription id on {msg:?}")
+                        })?;
+                        let clients = cx.sw.clients.read().await;
+                        let client = clients.get(&id).expect_or_log("client not found under id");
+                        let mut subs = client.subs.write().await;
+
+                        let mut found = false;
+                        for (ii, sub) in subs.iter().enumerate() {
+                            if *sub.id == sub_id {
+                                subs.swap_remove(ii);
+                                found = true;
+                                break;
+                            }
+                        }
+                        if !found {
+                            sw_tx
+                                .send(json!([
+                                    "NOTICE",
+                                    format!("no subscription found to close under id {sub_id}")
+                                ]))
+                                .await
+                                .unwrap_or_log();
+                        }
+                    }
                     _ => return Err(eyre::eyre!("invalid msg recieved: {msg:?}")),
                 }
             }
@@ -224,23 +295,59 @@ mod tests {
                         err
                     })?;
             info!(?response);
-            let event = fixture_request_json();
-            ws_stream
-                .send(WsMsg::Binary(serde_json::to_vec(&json!(["EVENT", event]))?))
-                .await?;
-            while let Some(Ok(msg)) = ws_stream.next().await {
-                let resp = match msg {
-                    WsMsg::Binary(vec) => vec,
-                    WsMsg::Pong(_) | WsMsg::Ping(_) | WsMsg::Close(_) => continue,
-                    msg => panic!("unexpected message {msg}"),
-                };
-                let resp: Value = serde_json::from_slice(&resp[..])?;
+            // test EVENT
+            {
+                let event = fixture_request_json();
+                ws_stream
+                    .send(WsMsg::Binary(serde_json::to_vec(&json!(["EVENT", event]))?))
+                    .await?;
+                while let Some(Ok(msg)) = ws_stream.next().await {
+                    let resp = match msg {
+                        WsMsg::Text(val) => val,
+                        WsMsg::Pong(_) | WsMsg::Ping(_) | WsMsg::Close(_) => continue,
+                        msg => panic!("unexpected message {msg}"),
+                    };
+                    let resp: Value = serde_json::from_str(&resp[..])?;
 
-                check_json(
-                    ("expected", &json!(["OK", event["id"], true])),
-                    ("response", &resp),
-                );
-                break;
+                    check_json(
+                        ("expected", &json!(["OK", event["id"], true])),
+                        ("response", &resp),
+                    );
+                    break;
+                }
+            }
+            // test REQ
+            {
+                let sub_id = Uuid::new_v4().to_string();
+                ws_stream
+                    .send(WsMsg::Binary(serde_json::to_vec(&json!([
+                        "REQ",
+                        sub_id,
+                        {}
+                    ]))?))
+                    .await?;
+                let mut event_ctr = 0;
+                while let Some(Ok(msg)) = ws_stream.next().await {
+                    let resp = match msg {
+                        WsMsg::Text(val) => val,
+                        WsMsg::Pong(_) | WsMsg::Ping(_) | WsMsg::Close(_) => continue,
+                        msg => panic!("unexpected message {msg}"),
+                    };
+                    let resp: Vec<Value> = serde_json::from_str(&resp[..])?;
+                    let kind = resp[0].as_str().unwrap();
+                    match kind {
+                        "EVENT" => event_ctr += 1,
+                        "EOSE" => {
+                            check_json(
+                                ("expected", &json!(["EOSE", sub_id])),
+                                ("response", &Value::Array(resp)),
+                            );
+                            assert_eq!(event_ctr, 6);
+                            break;
+                        }
+                        _ => panic!("unexpected event kind {kind}: {resp:?}"),
+                    }
+                }
             }
             server_handle.abort();
             // let (mut ws_tx, mut ws_rx) = ws_stream.split();
