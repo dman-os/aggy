@@ -16,7 +16,8 @@ pub mod utils;
 mod interlude {
     pub use crate::utils::default;
     pub use crate::{
-        AuthedUid, DocumentedEndpoint, EndpointWrapper, ErrorResponse, HttpEndpoint, Method, Ref,
+        AuthedUid, DocumentedEndpoint, EndpointWrapper, ErrorResponse, HttpEndpoint, Method,
+        RedisPool, Ref,
     };
     pub use axum::{response::IntoResponse, TypedHeader};
     pub use deps::*;
@@ -44,6 +45,12 @@ pub fn setup_tracing() -> eyre::Result<()> {
 
     Ok(())
 }
+
+#[derive(Clone, educe::Educe)]
+#[educe(Deref, Debug)]
+pub struct RedisPool(
+    #[educe(Debug(ignore))] pub bb8_redis::bb8::Pool<bb8_redis::RedisConnectionManager>,
+);
 
 #[async_trait::async_trait]
 pub trait Endpoint: Send + Sync + 'static {

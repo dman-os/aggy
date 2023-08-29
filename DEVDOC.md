@@ -2,6 +2,7 @@
 
 ## To-do
 
+- [ ] Observability
 - [x] Comment counts
 - [ ] Markdown input and html sanitization
 - [ ] Stylization

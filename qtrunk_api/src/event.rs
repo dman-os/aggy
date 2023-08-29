@@ -2,6 +2,7 @@ use crate::interlude::*;
 
 use std::collections::HashMap;
 
+use deps::redis::FromRedisValue;
 use serde_json::Value;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -51,6 +52,79 @@ impl FromRow<'_, sqlx::postgres::PgRow> for Event {
             kind,
             tags,
         })
+    }
+}
+impl redis::ToRedisArgs for Event {
+    fn write_redis_args<W>(&self, out: &mut W)
+    where
+        W: ?Sized + redis::RedisWrite,
+    {
+        let buf = serde_json::to_vec(self).unwrap_or_log();
+        out.write_arg(&buf[..]);
+    }
+}
+impl FromRedisValue for Event {
+    fn from_redis_value(v: &redis::Value) -> redis::RedisResult<Self> {
+        match v {
+            redis::Value::Data(vec) => Ok(serde_json::from_slice(&vec[..])?),
+            _ => Err((
+                redis::ErrorKind::TypeError,
+                "unexpected redis Value for Event",
+            )
+                .into()),
+        }
+        /* let map: ahash::AHashMap<String, &redis::Value> = FromRedisValue::from_redis_value(v)?;
+        Ok(Self {
+            id: {
+                let id = map
+                    .get("id")
+                    .ok_or_else(|| eyre::eyre!("id not found in map for Event"))?;
+                FromRedisValue::from_redis_value(*id)?
+            },
+            pubkey: {
+                let pubkey = map
+                    .get("pubkey")
+                    .ok_or_else(|| eyre::eyre!("pubkey not found in map for Event"))?;
+                FromRedisValue::from_redis_value(*pubkey)?
+            },
+            created_at: {
+                let created_at = map
+                    .get("created_at")
+                    .ok_or_else(|| eyre::eyre!("created_at not found in map for Event"))?;
+                let created_at: i64 = FromRedisValue::from_redis_value(*created_at)?;
+                OffsetDateTime::from_unix_timestamp(created_at)
+                    .map_err(|err| eyre::eyre!("invalid timestamp found in map for Event: {err}"))?
+            },
+            kind: {
+                let kind = map
+                    .get("kind")
+                    .ok_or_else(|| eyre::eyre!("kind not found in map for Event"))?;
+                let kind: i64 = FromRedisValue::from_redis_value(*created_at)?;
+                u16::try_from(kind)
+                    .map_err(|err| eyre::eyre!("invalid kind found in map for Event: {err}"))?
+            },
+            tags: {
+                let tags = map
+                    .get("tags")
+                    .ok_or_else(|| eyre::eyre!("kind not found in map for Event"))?;
+                let tags: String = FromRedisValue::from_redis_value(*tags);
+                serde_json::from_str(tags.as_str()).map_err(|err| {
+                    eyre::eyre!("error decoding tags json string for Event: {err}")
+                })?
+            },
+            content: {
+                let content = map
+                    .get("content")
+                    .ok_or_else(|| eyre::eyre!("content not found in map for Event"))?;
+                FromRedisValue::from_redis_value(*content)?
+            },
+            sig: {
+                let sig = map
+                    .get("sig")
+                    .ok_or_else(|| eyre::eyre!("sig not found in map for Event"))?;
+                FromRedisValue::from_redis_value(*sig)?
+            },
+        }) */
     }
 }
 
@@ -115,11 +189,64 @@ pub struct Filter {
     pub tags: Option<HashMap<char, Vec<String>>>,
 }
 
+impl Filter {
+    pub fn is_empty(&self) -> bool {
+        self.ids.is_none()
+            && self.authors.is_none()
+            && self.kinds.is_none()
+            && self.since.is_none()
+            && self.until.is_none()
+            && self.tags.is_none()
+    }
+    // TODO: test suite for this
+    pub fn matches(&self, event: &Event) -> bool {
+        [
+            self.ids.as_deref().map(|list| list.contains(&event.id)),
+            self.kinds.as_deref().map(|list| list.contains(&event.kind)),
+            self.since.map(|ts| ts < event.created_at),
+            self.until.map(|ts| ts > event.created_at),
+            self.authors
+                .as_deref()
+                .map(|list| list.contains(&event.pubkey)),
+            self.tags.as_ref().map(|map| {
+                let mut match_ctr = 0;
+                for tag in &event.tags {
+                    // we're only interested in [key, value, ...] tags
+                    if tag.len() < 2 {
+                        continue;
+                    }
+                    let mut chars = tag[0][1..].chars();
+                    // the key is an empty string
+                    let Some(char) = chars.next() else {
+                        continue;
+                    };
+                    // the key has more than one char, not eligible
+                    if chars.next().is_some() {
+                        continue;
+                    }
+                    // filter is not interested in this tag
+                    let Some(list) = map.get(&char) else {
+                        continue;
+                    };
+                    if list.contains(&tag[1]) {
+                        match_ctr += 1;
+                    }
+                }
+                match_ctr == map.len()
+            }),
+        ]
+        .into_iter()
+        .filter_map(|opt| opt)
+        .fold(true, |acc, val| acc && val)
+    }
+}
+
 impl<'de> Deserialize<'de> for Filter {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
     {
+        // use a subset struct to decode most of the items
         #[derive(Deserialize)]
         #[serde(crate = "serde")]
         pub struct Inner {
@@ -132,7 +259,9 @@ impl<'de> Deserialize<'de> for Filter {
             pub until: Option<i64>,
             pub limit: Option<usize>,
         }
+        // but use go through a json object step first to find all the tag filters
         let json: serde_json::Map<String, Value> = Deserialize::deserialize(deserializer)?;
+
         let mut tags: HashMap<char, Vec<String>> = default();
         for (key, val) in json.iter() {
             if key.starts_with('#') {
@@ -160,6 +289,7 @@ impl<'de> Deserialize<'de> for Filter {
                 tags.insert(tag, val);
             }
         }
+        // we decode Inner from the json
         let inner: Inner = serde_json::from_value(Value::Object(json))
             .map_err(|err| serde::de::Error::custom(format!("invalid filter: {err}")))?;
         Ok(Self {
@@ -185,7 +315,7 @@ impl<'de> Deserialize<'de> for Filter {
             },
             limit: inner.limit,
             authors: inner.authors,
-            tags: Some(tags),
+            tags: if !tags.is_empty() { Some(tags) } else { None },
         })
     }
 }

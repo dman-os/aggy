@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use deps::*;
+use crate::interlude::*;
 
 pub use axum::http;
 pub use axum::http::StatusCode;
@@ -50,20 +50,26 @@ pub type ExtraAssertions<'c, 'f> = dyn Fn(ExtraAssertionAgs<'c>) -> LocalBoxFutu
 
 pub struct TestContext {
     pub test_name: String,
-    pub pools: HashMap<String, TestDb>,
+    pub pg_pools: HashMap<String, TestDb>,
+    pub redis_pools: HashMap<String, TestRedis>,
 }
 
 impl TestContext {
-    pub fn new(test_name: String, pools: impl Into<HashMap<String, TestDb>>) -> Self {
+    pub fn new(
+        test_name: String,
+        pools: impl Into<HashMap<String, TestDb>>,
+        redis_pools: impl Into<HashMap<String, TestRedis>>,
+    ) -> Self {
         Self {
             test_name,
-            pools: pools.into(),
+            pg_pools: pools.into(),
+            redis_pools: redis_pools.into(),
         }
     }
 
     /// Call this after all holders of the [`SharedContext`] have been dropped.
     pub async fn close(mut self) {
-        for (_, db) in self.pools.drain() {
+        for (_, db) in self.pg_pools.drain() {
             db.close().await;
         }
     }
@@ -71,8 +77,32 @@ impl TestContext {
 
 impl Drop for TestContext {
     fn drop(&mut self) {
-        for (db_name, _) in &self.pools {
+        for (db_name, _) in &self.pg_pools {
             tracing::warn!("test context dropped without cleaning up for db: {db_name}",)
+        }
+    }
+}
+
+pub struct TestRedis {
+    pub pool: RedisPool,
+}
+
+impl TestRedis {
+    pub async fn new() -> Self {
+        Self {
+            pool: RedisPool(
+                bb8_redis::bb8::Pool::builder()
+                    .build(
+                        bb8_redis::RedisConnectionManager::new(
+                            crate::utils::get_env_var("TEST_REDIS_URL")
+                                .unwrap_or_log()
+                                .as_str(),
+                        )
+                        .unwrap_or_log(),
+                    )
+                    .await
+                    .unwrap_or_log(),
+            ),
         }
     }
 }

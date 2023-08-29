@@ -68,6 +68,7 @@ pub mod testing {
         let testing = TestContext::new(
             test_name.into(),
             [("epigram".to_string(), test_db(test_name).await)],
+            [],
         );
         let cx = state_fn_service(&testing);
         (testing, cx)
@@ -87,7 +88,7 @@ pub mod testing {
     pub fn state_fn(testing: &TestContext) -> crate::SharedContext {
         std::sync::Arc::new(crate::Context {
             db: crate::Db::Pg {
-                db_pool: testing.pools["epigram"].pool.clone(),
+                db_pool: testing.pg_pools["epigram"].pool.clone(),
             },
             config: crate::Config {
                 pass_salt_hash: b"sea brine".to_vec(),
@@ -103,6 +104,7 @@ pub mod testing {
         let testing = TestContext::new(
             test_name.into(),
             [("epigram".to_string(), test_db(test_name).await)],
+            [],
         );
         let cx = state_fn(&testing);
         (testing, cx)

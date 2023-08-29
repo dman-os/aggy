@@ -9,7 +9,7 @@ use serde_json::Value;
 use std::collections::HashMap;
 use tokio::{sync::mpsc::Sender, sync::RwLock};
 
-use crate::event::Filter;
+use crate::event::{Event, Filter};
 
 #[derive(Debug)]
 pub struct Subscription {
@@ -31,6 +31,65 @@ pub struct Client {
 pub struct Switchboard {
     #[educe(Debug(ignore))]
     clients: RwLock<HashMap<Uuid, Client>>,
+}
+
+pub async fn pub_event(cx: &Context, event: &Event) -> eyre::Result<()> {
+    use redis::AsyncCommands;
+    let mut conn = cx.redis.get().await?;
+    conn.publish(cx.config.event_hose_redis_channel.as_str(), event)
+        .await?;
+    Ok(())
+}
+
+pub async fn start_switchboard(cx: SharedContext) -> eyre::Result<()> {
+    /* // even though we recieve all events through a redis pub/sub (to allow horizontal scaling)
+    // we buffer the redis events in a tokio mpsc for...idk, pre-optimzation reasons
+    let (sw_tx, mut sw_rx) = tokio::sync::mpsc::unbounded_channel::<Event>(); */
+
+    // subscribe to the redis channel while on the main "task"
+    let mut conn = cx.redis.dedicated_connection().await?.into_pubsub();
+    conn.subscribe(cx.config.event_hose_redis_channel.as_str())
+        .await?;
+
+    /* // span a separate task for the polling though
+    let redis_loop_handle = tokio::spawn(async move {
+        let mut stream = conn.into_on_message();
+        while let Some(msg) = stream.next().await {
+            let event: Event = msg.get_payload().unwrap_or_log();
+            sw_tx.send(event).unwrap_or_log()
+        }
+    }); */
+
+    // while let Some(event) = sw_rx.recv().await {
+    let mut stream = conn.into_on_message();
+    while let Some(msg) = stream.next().await {
+        let event: Event = msg.get_payload().unwrap_or_log();
+        info!(?event, "event recieved for switiching");
+        // FIXME: stress test this
+        let clients = cx.sw.clients.read().await;
+        clients
+            .values()
+            // creat a future for each client
+            .map(|client| async {
+                let subs = client.subs.read().await;
+                for sub in &*subs {
+                    if let Some(filter) = sub.filters.iter().find(|filter| filter.matches(&event)) {
+                        let res = client.tx.send(json!(["EVENT", *sub.id, event])).await;
+                        // client must have disconnected
+                        if res.is_err() {
+                            break;
+                        }
+                        info!(?event.id, ?client.id, ?filter, "event sent to client according to filter");
+                    }
+                }
+            })
+            // mass poll them concurrently
+            .collect::<futures::stream::futures_unordered::FuturesUnordered<_>>()
+            .for_each_concurrent(None, |_| async {})
+            .await
+    }
+    // redis_loop_handle.abort();
+    Ok(())
 }
 
 pub async fn handler(
@@ -163,6 +222,7 @@ async fn handle_client(cx: SharedContext, socket: WebSocket, addr: std::net::Soc
                             });
                         }
                     }
+                    // FIXME: test this
                     "CLOSE" if msg.len() == 2 => {
                         let sub_id = msg[1].as_str().ok_or_else(|| {
                             eyre::eyre!("invalid CLOSE msg: invalid subscription id on {msg:?}")
@@ -267,92 +327,112 @@ mod tests {
         })
     }
 
-    #[tokio::test]
-    async fn suite() -> eyre::Result<()> {
+    #[test]
+    fn suite() {
         common::utils::testing::setup_tracing_once();
-        use tokio_tungstenite::tungstenite::Message as WsMsg;
-        let (testing, cx) = crate::utils::testing::cx_fn(common::function_full!()).await;
-        {
-            let addr = "127.0.0.1:19000";
-            let router = crate::router(cx);
-            let server_handle = tokio::spawn(
-                axum::Server::bind(&addr.parse().unwrap())
-                    .serve(router.into_make_service_with_connect_info::<std::net::SocketAddr>()),
-            );
-            let (mut ws_stream, response) =
-                tokio_tungstenite::connect_async("ws://127.0.0.1:19000")
-                    .await
-                    .map_err(|err| {
-                        match &err {
-                            tokio_tungstenite::tungstenite::Error::Http(err) => {
-                                if let Some(body) = err.body() {
-                                    let body = String::from_utf8(body.clone());
-                                    error!(?body, ?err);
+        let future = async {
+            use tokio_tungstenite::tungstenite::Message as WsMsg;
+            let (testing, cx) = crate::utils::testing::cx_fn(common::function_full!()).await;
+            {
+                let addr = "127.0.0.1:19000";
+                let router = crate::router(cx);
+                let server_handle =
+                    tokio::spawn(axum::Server::bind(&addr.parse().unwrap()).serve(
+                        router.into_make_service_with_connect_info::<std::net::SocketAddr>(),
+                    ));
+                let (mut ws_stream, response) =
+                    tokio_tungstenite::connect_async("ws://127.0.0.1:19000")
+                        .await
+                        .map_err(|err| {
+                            match &err {
+                                tokio_tungstenite::tungstenite::Error::Http(err) => {
+                                    if let Some(body) = err.body() {
+                                        let body = String::from_utf8(body.clone());
+                                        error!(?body, ?err);
+                                    }
                                 }
-                            }
-                            _ => {}
-                        };
-                        err
-                    })?;
-            info!(?response);
-            // test EVENT
-            {
-                let event = fixture_request_json();
-                ws_stream
-                    .send(WsMsg::Binary(serde_json::to_vec(&json!(["EVENT", event]))?))
-                    .await?;
-                while let Some(Ok(msg)) = ws_stream.next().await {
-                    let resp = match msg {
-                        WsMsg::Text(val) => val,
-                        WsMsg::Pong(_) | WsMsg::Ping(_) | WsMsg::Close(_) => continue,
-                        msg => panic!("unexpected message {msg}"),
-                    };
-                    let resp: Value = serde_json::from_str(&resp[..])?;
-
-                    check_json(
-                        ("expected", &json!(["OK", event["id"], true])),
-                        ("response", &resp),
-                    );
-                    break;
-                }
-            }
-            // test REQ
-            {
+                                _ => {}
+                            };
+                            err
+                        })?;
+                info!(?response);
                 let sub_id = Uuid::new_v4().to_string();
-                ws_stream
-                    .send(WsMsg::Binary(serde_json::to_vec(&json!([
-                        "REQ",
-                        sub_id,
-                        {}
-                    ]))?))
-                    .await?;
-                let mut event_ctr = 0;
-                while let Some(Ok(msg)) = ws_stream.next().await {
-                    let resp = match msg {
-                        WsMsg::Text(val) => val,
-                        WsMsg::Pong(_) | WsMsg::Ping(_) | WsMsg::Close(_) => continue,
-                        msg => panic!("unexpected message {msg}"),
-                    };
-                    let resp: Vec<Value> = serde_json::from_str(&resp[..])?;
-                    let kind = resp[0].as_str().unwrap();
-                    match kind {
-                        "EVENT" => event_ctr += 1,
-                        "EOSE" => {
-                            check_json(
-                                ("expected", &json!(["EOSE", sub_id])),
-                                ("response", &Value::Array(resp)),
-                            );
-                            assert_eq!(event_ctr, 6);
-                            break;
+                // test REQ
+                {
+                    ws_stream
+                        .send(WsMsg::Binary(serde_json::to_vec(&json!([
+                            "REQ",
+                            sub_id,
+                            {}
+                        ]))?))
+                        .await?;
+                    let mut event_ctr = 0;
+                    while let Some(Ok(msg)) = ws_stream.next().await {
+                        let resp = match msg {
+                            WsMsg::Text(val) => val,
+                            WsMsg::Pong(_) | WsMsg::Ping(_) | WsMsg::Close(_) => continue,
+                            msg => panic!("unexpected message {msg}"),
+                        };
+                        let resp: Vec<Value> = serde_json::from_str(&resp[..])?;
+                        let kind = resp[0].as_str().unwrap();
+                        match kind {
+                            "EVENT" => event_ctr += 1,
+                            "EOSE" => {
+                                check_json(
+                                    ("expected", &json!(["EOSE", sub_id])),
+                                    ("response", &Value::Array(resp)),
+                                );
+                                assert_eq!(event_ctr, 5);
+                                break;
+                            }
+                            _ => panic!("unexpected event kind {kind}: {resp:?}"),
                         }
-                        _ => panic!("unexpected event kind {kind}: {resp:?}"),
                     }
                 }
+                // test EVENT
+                {
+                    let event = fixture_request_json();
+                    ws_stream
+                        .send(WsMsg::Binary(serde_json::to_vec(&json!(["EVENT", event]))?))
+                        .await?;
+                    while let Some(Ok(msg)) = ws_stream.next().await {
+                        let resp = match msg {
+                            WsMsg::Text(val) => val,
+                            WsMsg::Pong(_) | WsMsg::Ping(_) | WsMsg::Close(_) => continue,
+                            msg => panic!("unexpected message {msg}"),
+                        };
+                        let resp: Vec<Value> = serde_json::from_str(&resp[..])?;
+                        let kind = resp[0].as_str().unwrap();
+                        match kind {
+                            "EVENT" => {
+                                check_json(
+                                    ("expected", &json!(["EVENT", sub_id, event])),
+                                    ("response", &Value::Array(resp)),
+                                );
+                                break;
+                            }
+                            "OK" => {
+                                check_json(
+                                    ("expected", &json!(["OK", event["id"], true])),
+                                    ("response", &Value::Array(resp)),
+                                );
+                            }
+                            _ => panic!("unexpected event kind {kind}: {resp:?}"),
+                        }
+                    }
+                }
+                server_handle.abort();
+                // let (mut ws_tx, mut ws_rx) = ws_stream.split();
             }
-            server_handle.abort();
-            // let (mut ws_tx, mut ws_rx) = ws_stream.split();
-        }
-        testing.close().await;
-        Ok(())
+            testing.close().await;
+            Ok::<_, eyre::Report>(())
+        };
+        tokio::runtime::Builder::new_multi_thread()
+            .enable_all()
+            .build()
+            .unwrap()
+            .block_on(async { tokio::time::timeout(std::time::Duration::new(30, 0), future).await })
+            .unwrap_or_log()
+            .unwrap_or_log();
     }
 }

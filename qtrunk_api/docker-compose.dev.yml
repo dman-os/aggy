@@ -7,11 +7,9 @@ services:
       - .env
     ports:
       - "5434:5432"
-  # redis:
-  #   profiles:
-  #     - disabled
-  #   container_name: qtrunk-redis-server-dev
-  #   env_file:
-  #     - .env
-  #   ports:
-  #     - "6379:6379"
+  redis:
+    container_name: qtrunk-redis-server-dev
+    env_file:
+      - .env
+    ports:
+      - "6334:6379"

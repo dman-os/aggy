@@ -17,16 +17,14 @@ services:
     # expose:
     #     - "5432"
 
-  # redis:
-  #   profiles:
-  #     - disabled
-  #   container_name: qtrunk-redis-server
-  #   image: redis:7-alpine
-  #   # restart: unless-stopped
-  #   volumes:
-  #     - redisdata:/var/lib/redis/data
-  #   networks:
-  #     - net-one
+  redis:
+    container_name: qtrunk-redis-server
+    image: redis:7-alpine
+    # restart: unless-stopped
+    volumes:
+      - redisdata:/var/lib/redis/data
+    networks:
+      - net-one
     # expose:
     #     - "6379"
 

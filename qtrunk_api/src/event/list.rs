@@ -35,7 +35,7 @@ impl crate::Endpoint for ListEvents {
         request: Self::Request,
     ) -> Result<Self::Response, Self::Error> {
         // let limit = request.limit.unwrap_or(100);
-        let items = if request.is_empty() {
+        let items = if request.is_empty() || (request.len() == 1 && request[0].is_empty()) {
             match &cx.db {
                 crate::Db::Pg { db_pool } => {
                     let rows = sqlx::query(
@@ -53,12 +53,12 @@ FROM events
                     )
                     .fetch_all(db_pool)
                     .await
-                    .map_err(|err| common::internal_err!("db err: {err}"))?;
+                    .unwrap_or_log();
 
                     rows.iter()
                         .map(Event::from_row)
                         .collect::<Result<Vec<_>, _>>()
-                        .map_err(|err| common::internal_err!("row mapping err: {err}"))?
+                        .unwrap_or_log()
                 }
             }
         } else {

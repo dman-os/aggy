@@ -1,7 +1,7 @@
 pub mod testing {
     use crate::interlude::*;
 
-    use common::utils::testing::{TestContext, TestDb};
+    use common::utils::testing::{TestContext, TestDb, TestRedis};
 
     pub const SERVICE_SECRET: &str = "public square";
 
@@ -19,14 +19,16 @@ pub mod testing {
     pub fn state_fn(testing: &TestContext) -> crate::SharedContext {
         std::sync::Arc::new(crate::Context {
             db: crate::Db::Pg {
-                db_pool: testing.pools["qtrunk"].pool.clone(),
+                db_pool: testing.pg_pools["qtrunk"].pool.clone(),
             },
+            redis: testing.redis_pools["default"].pool.clone(),
             config: crate::Config {
                 pass_salt_hash: b"sea brine".to_vec(),
                 argon2_conf: argon2::Config::default(),
                 auth_token_lifespan: time::Duration::seconds_f64(60. * 60. * 24. * 30.),
                 web_session_lifespan: time::Duration::seconds_f64(60. * 60. * 24. * 30.),
                 service_secret: SERVICE_SECRET.to_string(),
+                event_hose_redis_channel: format!("event_hose_{}", testing.test_name),
             },
             sw: default(),
         })
@@ -36,8 +38,10 @@ pub mod testing {
         let testing = TestContext::new(
             test_name.into(),
             [("qtrunk".to_string(), test_db(test_name).await)],
+            [("default".to_string(), TestRedis::new().await)],
         );
         let cx = state_fn(&testing);
+        let _ = tokio::spawn(crate::connect::start_switchboard(cx.clone()));
         (testing, cx)
     }
 }
