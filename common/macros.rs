@@ -557,7 +557,7 @@ macro_rules! integration_table_tests_shorthand {
                             $crate::integration_table_tests!{
                                 $d(
                                     $d name: {
-                                        $d crate::optional_token!(
+                                        $crate::optional_token!(
                                             $d(uri: $d uri,)?
                                             $(uri: $s_uri,)?
                                         );
@@ -708,7 +708,7 @@ mod tests {
                             status: $status,
                             router: sum_router(),
                             cx_fn: (|name: &'static str| async move {
-                                (crate::utils::testing::TestContext::new(name.to_string(), []), (),)
+                                (crate::utils::testing::TestContext::new(name.to_string(), [], []), (),)
                             }),
                             body: $json_body,
                             $(check_json: $check_json,)?

@@ -13,3 +13,12 @@ CREATE TABLE events (
 ,   PRIMARY KEY(id)
 -- ,   UNIQUE(id)
 );
+
+CREATE INDEX ON
+    events (pubkey);
+
+CREATE INDEX ON
+    events (kind);
+
+CREATE INDEX ON
+    events (created_at);

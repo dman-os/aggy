@@ -171,8 +171,8 @@ mod cheapstr {
         }
     }
 
-    impl Into<String> for CHeapStr {
-        fn into(self) -> String {
+    impl From<CHeapStr> for String {
+        fn from(val: CHeapStr) -> String {
             // FIXME: optmize this
             /* let string = if let Some(s) = Arc::get_mut(&mut self.0) {
                 unsafe {
@@ -187,7 +187,7 @@ mod cheapstr {
             };
             std::mem::forget(self.0);
             string */
-            self.string.into_owned()
+            val.string.into_owned()
         }
     }
 }

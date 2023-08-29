@@ -100,20 +100,15 @@ WITH webs as (
                 )
                 .fetch_one(db_pool)
                 .await
-                .map_err(|err| match &err {
-                    sqlx::Error::Database(boxed) if boxed.constraint().is_some() => {
-                        match boxed.constraint().unwrap() {
-                            "sessions_auth_session_id_fkey" => Error::AuthSessionNotFound {
+                .map_err(|err| {
+                    if let sqlx::Error::Database(boxed) = &err {
+                        if let Some("sessions_auth_session_id_fkey") = boxed.constraint() {
+                            return Error::AuthSessionNotFound {
                                 id: request.auth_session_id.unwrap(),
-                            },
-                            _ => Error::Internal {
-                                message: format!("db error: {err}"),
-                            },
+                            };
                         }
                     }
-                    _ => Error::Internal {
-                        message: format!("db error: {err}"),
-                    },
+                    panic!("db error: {err}");
                 })?
             }
         };

@@ -236,8 +236,8 @@ impl Filter {
             }),
         ]
         .into_iter()
-        .filter_map(|opt| opt)
-        .fold(true, |acc, val| acc && val)
+        .flatten()
+        .all(|val| val)
     }
 }
 
@@ -264,8 +264,7 @@ impl<'de> Deserialize<'de> for Filter {
 
         let mut tags: HashMap<char, Vec<String>> = default();
         for (key, val) in json.iter() {
-            if key.starts_with('#') {
-                let tag = &key[1..];
+            if let Some(tag) = key.strip_prefix('#') {
                 let mut iter = tag.chars();
                 let Some(tag) = iter.next() else {
                     return Err(

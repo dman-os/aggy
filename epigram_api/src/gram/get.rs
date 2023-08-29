@@ -174,12 +174,7 @@ WHERE id = $1
                     .await
                     .map_err(|err| match err {
                         sqlx::Error::RowNotFound => Error::NotFound { id: request.id },
-                        _ => Error::Internal {
-                            #[cfg(not(censor_internal_errors))]
-                            message: format!("db error: {err}"),
-                            #[cfg(censor_internal_errors)]
-                            message: format!("internal server error"),
-                        },
+                        err => panic!("db error: {err}"),
                     })?;
                     Gram {
                         id: row.id,
@@ -342,7 +337,7 @@ mod tests {
             }),
         },
         fails_if_not_found_2: {
-            uri: format!("/grams/{}?includeReplies", Uuid::new_v4()),
+            uri: format!("/grams/{}?includeReplies=true", Uuid::new_v4()),
             status: StatusCode::NOT_FOUND,
             check_json: serde_json::json!({
                 "error": "notFound",

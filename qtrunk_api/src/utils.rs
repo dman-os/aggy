@@ -41,7 +41,7 @@ pub mod testing {
             [("default".to_string(), TestRedis::new().await)],
         );
         let cx = state_fn(&testing);
-        let _ = tokio::spawn(crate::connect::start_switchboard(cx.clone()));
+        drop(tokio::spawn(crate::connect::start_switchboard(cx.clone())));
         (testing, cx)
     }
 }

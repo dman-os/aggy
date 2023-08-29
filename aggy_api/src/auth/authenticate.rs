@@ -61,11 +61,11 @@ WHERE user_id = (
                 )
                 .fetch_one(db_pool)
                 .await
-                .map_err(|err| match &err {
-                    sqlx::Error::RowNotFound => Error::CredentialsRejected,
-                    _ => Error::Internal {
-                        message: format!("db error: {err}"),
-                    },
+                .map_err(|err| {
+                    if let sqlx::Error::RowNotFound = &err {
+                        return Error::CredentialsRejected;
+                    }
+                    panic!("db error: {err}")
                 })?;
                 (result.user_id, result.pass_hash)
             }
@@ -100,9 +100,7 @@ VALUES (
             )
             .fetch_one(db_pool)
             .await
-            .map_err(|err| Error::Internal {
-                message: format!("db error: {err}"),
-            })?,
+            .unwrap_or_log(),
         };
         Ok(out)
     }

@@ -98,7 +98,7 @@ WHERE id = $1::uuid
                 .await
                 .map_err(|err| match err {
                     sqlx::Error::RowNotFound => Error::AccessDenied,
-                    _ => common::internal_err!("db error: {err}"),
+                    _ => panic!("db error: {err}"),
                 })?;
 
                 (
@@ -149,9 +149,7 @@ WHERE id = $1::uuid
                 author_pubkey: pub_key_str,
             })
             .await
-            .map_err(|err| {
-                common::internal_err!("err trying to create epigram from `epigram_api`: {err}")
-            })?;
+            .unwrap_or_log();
         let epigram_id = common::utils::decode_hex_multibase(gram.id.as_str()).unwrap_or_log();
         let item = match &cx.db {
             crate::Db::Pg { db_pool } => {
@@ -199,7 +197,7 @@ FROM
                 )
                 .fetch_one(db_pool)
                 .await
-                .map_err(|err| common::internal_err!("db error: {err}"))?;
+                .unwrap_or_log();
                 Post {
                     id: row.id,
                     created_at: row.created_at,
