@@ -220,17 +220,12 @@ INSERT INTO public.events (
                 .execute(db_pool)
                 .await
                 .map_err(|err| {
-                    // alias ErrorKind here so that the `internal_err` functions properly
-                    use ErrorKind as Error;
-                    match &err {
-                        sqlx::Error::Database(boxed) if boxed.constraint().is_some() => {
-                            match boxed.constraint().unwrap() {
-                                "events_pkey" => Error::Duplicate,
-                                _ => common::internal_err!("db error: {err}"),
-                            }
+                    if let sqlx::Error::Database(boxed) = &err {
+                        if let Some("events_pkey") = boxed.constraint() {
+                            return ErrorKind::Duplicate;
                         }
-                        _ => common::internal_err!("db error: {err}"),
                     }
+                    panic!("db error: {err}");
                 })
                 .map_err(|kind| Error {
                     event_id: request.id.clone(),
@@ -238,6 +233,9 @@ INSERT INTO public.events (
                 })?;
             }
         }
+        crate::connect::pub_event(cx, &request)
+            .await
+            .unwrap_or_log();
         Ok(Response { id: request.id })
     }
 }

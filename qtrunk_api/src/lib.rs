@@ -25,7 +25,7 @@ mod interlude {
     pub use common::{
         utils::{CHeapStr, ValidationErrors},
         AuthedUid, AuthenticatedEndpoint, Authorize, DocumentedEndpoint, Endpoint, EndpointWrapper,
-        ErrorResponse, HttpEndpoint, HttpResponse, Method, Ref, StatusCode, Tag,
+        ErrorResponse, HttpEndpoint, HttpResponse, Method, RedisPool, Ref, StatusCode, Tag,
     };
 
     pub type BearerToken = axum::headers::Authorization<axum::headers::authorization::Bearer>;
@@ -53,17 +53,18 @@ pub struct Config {
     pub auth_token_lifespan: time::Duration,
     pub web_session_lifespan: time::Duration,
     pub service_secret: String,
+    pub event_hose_redis_channel: String,
 }
 
 #[derive(Debug)]
 pub struct Context {
     pub config: Config,
     pub db: Db,
+    pub redis: RedisPool,
     pub sw: connect::Switchboard,
 }
 
 #[derive(Debug)]
-#[non_exhaustive]
 pub enum Db {
     Pg { db_pool: sqlx::postgres::PgPool },
 }

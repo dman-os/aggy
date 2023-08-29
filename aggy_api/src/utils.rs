@@ -25,6 +25,7 @@ pub mod testing {
                     epigram_api::utils::testing::test_db(test_name).await,
                 ),
             ],
+            [],
         );
         let cx = state_fn_service(&testing);
         (testing, cx)
@@ -48,7 +49,7 @@ pub mod testing {
     ) -> crate::SharedContext {
         std::sync::Arc::new(crate::Context {
             db: crate::Db::Pg {
-                db_pool: testing.pools["aggy"].pool.clone(),
+                db_pool: testing.pg_pools["aggy"].pool.clone(),
             },
             config: crate::Config {
                 pass_salt_hash: b"sea brine".to_vec(),
@@ -70,7 +71,7 @@ pub mod testing {
     ) -> crate::SharedContext {
         std::sync::Arc::new(crate::Context {
             db: crate::Db::Pg {
-                db_pool: testing.pools["aggy"].pool.clone(),
+                db_pool: testing.pg_pools["aggy"].pool.clone(),
             },
             config: crate::Config {
                 pass_salt_hash: b"sea brine".to_vec(),
@@ -95,6 +96,7 @@ pub mod testing {
                     epigram_api::utils::testing::test_db(test_name).await,
                 ),
             ],
+            [],
         );
         let cx = state_fn_with_epigram(&testing);
         (testing, cx)
@@ -104,6 +106,7 @@ pub mod testing {
         let testing = TestContext::new(
             test_name.into(),
             [("aggy".to_string(), test_db(test_name).await)],
+            [],
         );
         let cx = state_fn(&testing);
         (testing, cx)

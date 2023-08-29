@@ -82,6 +82,8 @@ redis = { version = "0.23.0", features = [
   "tokio-rustls-comp",
   "streams",
   "connection-manager",
+  "json",
+  "ahash",
 ] }
 bb8-redis = "0.13.1"
 lettre = { version = "0.10.4", features = [
