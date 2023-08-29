@@ -77,7 +77,7 @@ impl TestContext {
 
 impl Drop for TestContext {
     fn drop(&mut self) {
-        for (db_name, _) in &self.pg_pools {
+        for db_name in self.pg_pools.keys() {
             tracing::warn!("test context dropped without cleaning up for db: {db_name}",)
         }
     }
@@ -245,7 +245,7 @@ impl<'a> sqlx::migrate::MigrationSource<'a> for FlywayMigrationSource<'a> {
                         }
                     };
                     let cx = cx.clone();
-                    _ = tokio::task::spawn(async move {
+                    drop(tokio::task::spawn(async move {
                         // std::fs::metadata traverses symlinks
                         let metadata = match std::fs::metadata(&entry.path()) {
                             Ok(val) => val,
@@ -314,7 +314,7 @@ impl<'a> sqlx::migrate::MigrationSource<'a> for FlywayMigrationSource<'a> {
                             )))
                             .await
                             .unwrap_or_log();
-                    });
+                    }));
                 }
             })
         }

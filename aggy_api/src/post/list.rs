@@ -182,7 +182,7 @@ LIMIT $2 + 1
                 cursor: None,
                 items: vec![],
             }),
-            Err(err) => Err(common::internal_err!("db err: {err}")),
+            Err(err) => panic!("db err: {err}"),
             Ok(rows) => {
                 use sqlx::FromRow;
                 let more_rows_pending = rows.len() == limit + 1;
