@@ -47,7 +47,7 @@ fn pg_query(request: &Request) -> Result<(String, sqlx::postgres::PgArguments), 
         use rand::*;
         const ABET: &[u8] = b"ABCDEFGHIJKLMNOPabcdefghijklmnop";
         let idx: [usize; 10] = rng.gen();
-        let out = [0u8; 10];
+        let mut out = [0u8; 10];
         for ii in idx {
             out[ii] = ABET[ii % ABET.len()];
         }
@@ -149,7 +149,27 @@ fn pg_query(request: &Request) -> Result<(String, sqlx::postgres::PgArguments), 
                     let ph = args.add(ts);
                     Ok::<_, Error>(format!("created_at < ({ph})"))
                 }),
-                // TODO: tags
+                filter.tags.as_ref().map(|tags| {
+                    Ok::<_, Error>(
+                        tags.iter()
+                            .map(|(char, needles)| {
+                                let jsonpaths = needles
+                                    .iter()
+                                    .map(|val| {
+                                        format!(r#"$ ? (@[0] == "{char}" && @[1] == "{val}")"#)
+                                    })
+                                    .collect::<Vec<_>>();
+                                let ph = args.add(dbg!(jsonpaths));
+                                format!("tags @? ANY({ph}::jsonpath[])")
+                            })
+                            .fold("true".to_string(), |mut acc, val| {
+                                acc.push_str(" AND (");
+                                acc.push_str(&val[..]);
+                                acc.push_str(")");
+                                acc
+                            }),
+                    )
+                }), // TODO: tags
             ]
             .into_iter()
             // remove all the None values
@@ -224,7 +244,7 @@ impl crate::Endpoint for ListEvents {
         let items = match &cx.db {
             crate::Db::Pg { db_pool } => {
                 let (query, args) = pg_query(&request)?;
-                sqlx::query_as_with(&dbg!(query)[..], args)
+                sqlx::query_as_with(&query[..], args)
                     .fetch_all(db_pool)
                     .await
                     .unwrap_or_log()
@@ -238,7 +258,7 @@ impl crate::Endpoint for ListEvents {
 mod tests {
     use crate::interlude::*;
 
-    use super::Request;
+    // use super::Request;
     use crate::event::testing::*;
 
     /*
