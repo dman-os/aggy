@@ -174,7 +174,7 @@ impl Endpoint for CreateEvent {
     type Error = Error;
     type Cx = Context;
 
-    #[tracing::instrument(skip(cx))]
+    #[tracing::instrument(skip(cx), err)]
     async fn handle(
         &self,
         cx: &Self::Cx,

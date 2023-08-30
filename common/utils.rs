@@ -95,6 +95,12 @@ mod cheapstr {
         string: Cow<'static, str>,
     }
 
+    impl std::fmt::Display for CHeapStr {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            self.string.fmt(f)
+        }
+    }
+
     impl CHeapStr {
         /// Creates a new [`IdUnique`] from any string-like type.
         pub fn new(string: impl Into<Cow<'static, str>>) -> Self {

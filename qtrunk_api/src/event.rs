@@ -298,7 +298,7 @@ impl<'de> Deserialize<'de> for Filter {
                 Some(ts) => Some(OffsetDateTime::from_unix_timestamp(ts).map_err(|_| {
                     serde::de::Error::invalid_value(
                         serde::de::Unexpected::Signed(ts),
-                        &"a avlid utc unix timestamp",
+                        &"a valid utc unix timestamp",
                     )
                 })?),
                 None => None,
@@ -326,7 +326,6 @@ pub mod testing {
     use super::*;
 
     use once_cell::sync::Lazy;
-
     pub const EVENT_01_ID: &str =
         "b042eae42505d83996af3694f47224128596c89a3ea1a7fd27ea43c8e559cf20";
 
@@ -358,47 +357,47 @@ pub mod testing {
     });
 
     pub const EVENT_03_ID: &str =
-        "8a8228471b5a0de4ec033749f90d2dbef1247b424bbb4c94b630575d84e782ce";
+        "3d849f6890e511f8ffefdce494da6f95789e4b8a0354275c227b1aa81362b20f";
 
     pub static EVENT_03: Lazy<Event> = Lazy::new(|| {
         Event {
         id: EVENT_03_ID.into(),
         pubkey: "bd9002616950efb59b2c09446735b215b400052779ace5779f7d9c1290a8fa8e".into(),
-        created_at: OffsetDateTime::from_unix_timestamp(1692815146).unwrap(),
+        created_at: OffsetDateTime::from_unix_timestamp(1692815300).unwrap(),
         kind: 1,
         tags: serde_json::from_str(r#"[]"#).unwrap(),
         content: r#"I have information that'll lead to the arrest of Kermit The Frog"#.into(),
-        sig: "aa1b89e0f86dca2e930c57f2311dedcc30c9a2ff13f56dcfc0cf018c8f5e2d867bacd9889fafc5cd6e33acb8e8bc17de7655bb67f5813477cd0c9f0de0d5bfb8".into(),
+        sig: "f7d63de3be8c33334363098e53507cd5dc211d73e9e57be254c5b1035718cc4678501bc1a18d1afabe9b9b35968ba41440cae5bf46db3ebeb3ab1cf1eb359fd9".into(),
     }
     });
 
     pub const EVENT_04_ID: &str =
-        "ec41a05e3f5921d1b16b807f5c6e77b54349819fc59a998d341e8e15bda378e6";
+        "6b4c4c5818219aca0055f38c1dc255907f5fbcf21b0332857cfddf697ac91cd7";
 
     pub static EVENT_04: Lazy<Event> = Lazy::new(|| {
         Event {
         id: EVENT_04_ID.into(),
         pubkey: "bd9002616950efb59b2c09446735b215b400052779ace5779f7d9c1290a8fa8e".into(),
-        created_at: OffsetDateTime::from_unix_timestamp(1692815146).unwrap(),
+        created_at: OffsetDateTime::from_unix_timestamp(1692815400).unwrap(),
         kind: 1,
-        tags: serde_json::from_str(r#"[["e","8a8228471b5a0de4ec033749f90d2dbef1247b424bbb4c94b630575d84e782ce"]]"#).unwrap(),
+        tags: serde_json::from_str(r#"[["e","3d849f6890e511f8ffefdce494da6f95789e4b8a0354275c227b1aa81362b20f"]]"#).unwrap(),
         content: r#"I'm glad people are paying attention. Information will be released soonTM. Meanwhile, I'll be selling Henson-gate tank-tops and jerseys. Links in my bio"#.into(),
-        sig: "fbeaf4ac101e8252e9a4cce13e8004b4232b5a9e1ec236e49312151f87b24025fea94c6f25171eb7e68b048fc9b44c0f5e443284f65ca9087f15af0cef6efcb3".into(),
+        sig: "8a245231616d31b5ff13401884e798bf6947570c29093ac3e3850a72991c02e6deed77f60ca9921f4b4901648ed03a3e70fe5d59bc623d6c9afb824e270e60f5".into(),
     }
     });
 
     pub const EVENT_05_ID: &str =
-        "51acf76b8a5676950bd8b40bff62ee652b7d672cb95d029a466185eb1291dc5a";
+        "e974080cde211594bbf3197ec9bceb43a27ed67366671fa69d5b65c1848d2f6e";
 
     pub static EVENT_05: Lazy<Event> = Lazy::new(|| {
         Event {
         id: EVENT_05_ID.into(),
         pubkey: "167c3b7d2640757b2d276c0f9c50d6820aa45208f97acd06a76920e532639c20".into(),
-        created_at: OffsetDateTime::from_unix_timestamp(1692815146).unwrap(),
+        created_at: OffsetDateTime::from_unix_timestamp(1692815500).unwrap(),
         kind: 1,
-        tags: serde_json::from_str(r#"[["e","8a8228471b5a0de4ec033749f90d2dbef1247b424bbb4c94b630575d84e782ce"]]"#).unwrap(),
+        tags: serde_json::from_str(r#"[["e","3d849f6890e511f8ffefdce494da6f95789e4b8a0354275c227b1aa81362b20f"]]"#).unwrap(),
         content: r#"Henson-gate"#.into(),
-        sig: "14ee5f9a5e2aa95064e297a4801b4b0c12392d601c67fd3a74b8dfebe2baa525b129eaa51d713531693ff18eaf365c14cb19a301c553629b9d7853950dc1bd55".into(),
+        sig: "f7a4e72838ca5062aadfb9d56bc837012374bdc4050f7aa004f3c81881e0d303a1ca6b45aa6f72555e7bda0f571d5572a8acd9b284ed5809d5f1ff652f06b0f3".into(),
     }
     });
 }
