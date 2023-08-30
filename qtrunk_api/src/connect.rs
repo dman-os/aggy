@@ -20,8 +20,6 @@ pub struct Subscription {
 #[derive(Debug)]
 pub struct Client {
     id: Uuid,
-    connected_at: OffsetDateTime,
-    addr: std::net::SocketAddr,
     subs: RwLock<Vec<Subscription>>,
     tx: Sender<Value>,
 }
@@ -33,6 +31,7 @@ pub struct Switchboard {
     clients: RwLock<HashMap<Uuid, Client>>,
 }
 
+#[tracing::instrument(skip(cx), err)]
 pub async fn pub_event(cx: &Context, event: &Event) -> eyre::Result<()> {
     use redis::AsyncCommands;
     let mut conn = cx.redis.get().await?;
@@ -101,7 +100,9 @@ pub async fn handler(
     ws.on_upgrade(move |socket| handle_client(cx, socket, addr))
 }
 
+#[tracing::instrument(skip(cx, socket))]
 async fn handle_client(cx: SharedContext, socket: WebSocket, addr: std::net::SocketAddr) {
+    let connected_at = OffsetDateTime::now_utc();
     // the web socket pipes
     let (mut ws_tx, mut ws_rx) = socket.split();
     // the switchboard pipes
@@ -114,8 +115,6 @@ async fn handle_client(cx: SharedContext, socket: WebSocket, addr: std::net::Soc
             id,
             Client {
                 id,
-                addr,
-                connected_at: OffsetDateTime::now_utc(),
                 subs: default(),
                 tx: sw_tx.clone(),
             },
@@ -170,6 +169,7 @@ async fn handle_client(cx: SharedContext, socket: WebSocket, addr: std::net::Soc
                                 "unexpected msg recieved: invalid EVENT msg {msg:?} | {err}"
                             )
                         })?;
+                        info!(?event, "client sent Event");
                         let res = crate::event::create::CreateEvent.handle(&cx, event).await;
                         let res = match res {
                             Ok(ok) => ok.to_nostr_ok(),
@@ -213,6 +213,7 @@ async fn handle_client(cx: SharedContext, socket: WebSocket, addr: std::net::Soc
                         let mut subs = client.subs.write().await;
 
                         let sub_id = CHeapStr::new(sub_id.to_string());
+                        info!(?sub_id, ?filters, "client created subscription");
                         if let Some(sub) = subs.iter_mut().find(|sub| sub.id == sub_id) {
                             sub.filters = filters;
                         } else {
@@ -239,6 +240,7 @@ async fn handle_client(cx: SharedContext, socket: WebSocket, addr: std::net::Soc
                                 break;
                             }
                         }
+                        info!(sub_id, found, "client closed subscription");
                         if !found {
                             sw_tx
                                 .send(json!([
@@ -259,7 +261,7 @@ async fn handle_client(cx: SharedContext, socket: WebSocket, addr: std::net::Soc
         res = (&mut tx_task) => {
             match res {
                 Ok(()) => {},
-                Err(err) => debug!(?err, ?id, ?addr, "error in client send loop"),
+                Err(err) => error!(?err, ?id, ?addr, "error in client send loop"),
             }
             rx_task.abort();
         }
@@ -278,7 +280,14 @@ async fn handle_client(cx: SharedContext, socket: WebSocket, addr: std::net::Soc
     }
     {
         let mut clients = cx.sw.clients.write().await;
-        clients.remove(&id);
+        let client = clients.remove(&id).unwrap_or_log();
+        let subs = client.subs.read().await;
+        info!(
+            ?id,
+            ?connected_at,
+            sub_count = subs.len(),
+            "client disconnected"
+        )
     }
 }
 

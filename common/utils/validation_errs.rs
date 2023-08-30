@@ -57,7 +57,7 @@ impl From<validator::ValidationErrorsKind> for ValidationErrorsKind {
 
 #[derive(Default, Debug, Serialize, Clone, PartialEq, utoipa::ToSchema)]
 #[serde(crate = "serde", rename_all = "camelCase")]
-pub struct ValidationErrors(HashMap<&'static str, ValidationErrorsKind>);
+pub struct ValidationErrors(pub HashMap<&'static str, ValidationErrorsKind>);
 
 impl fmt::Display for ValidationError {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -140,12 +140,13 @@ impl std::error::Error for ValidationErrors {
     }
 }
 
-impl From<validator::ValidationErrors> for ValidationErrors {
-    fn from(errs: validator::ValidationErrors) -> Self {
+impl From<validator::ValidationErrors> for ValidationErrors
+{
+    fn from(value: validator::ValidationErrors) -> Self {
         Self(
-            errs.into_errors()
+            value.into_errors()
                 .into_iter()
-                .map(|(key, val)| (key, val.into()))
+                .map(|(key, val)| (key, ValidationErrorsKind::from(val)))
                 .collect(),
         )
     }
