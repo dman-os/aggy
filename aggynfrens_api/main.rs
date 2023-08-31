@@ -1,5 +1,8 @@
 use deps::*;
 
+use axum::http;
+use tower_http::ServiceBuilderExt;
+
 shadow_rs::shadow!(build);
 
 mod playground;
@@ -96,6 +99,55 @@ fn main() {
                 .nest("/epigram", {
                     axum::Router::new().merge(epigram_api::router(epigram_cx))
                 })
+                .nest("/qtrunk", {
+                    use qtrunk_api::*;
+                    let config = Config {
+                        pass_salt_hash: uuid::Uuid::new_v4().as_bytes().to_vec(),
+                        argon2_conf: argon2::Config::default(),
+                        auth_token_lifespan: time::Duration::new(
+                            common::utils::get_env_var("AUTH_TOKEN_LIFESPAN_SECS")
+                                .unwrap_or_log()
+                                .parse()
+                                .unwrap_or_log(),
+                            0,
+                        ),
+                        web_session_lifespan: time::Duration::new(
+                            common::utils::get_env_var("WEB_SESSION_LIFESPAN_SECS")
+                                .unwrap_or_log()
+                                .parse()
+                                .unwrap_or_log(),
+                            0,
+                        ),
+                        service_secret: common::utils::get_env_var("SERVICE_SECRET")
+                            .unwrap_or_log(),
+                        event_hose_redis_channel: common::utils::get_env_var(
+                            "REDIS_PUBSUB_NOSTR_HOSE",
+                        )
+                        .unwrap_or_log(),
+                    };
+                    let db_url = common::utils::get_env_var("QTRUNK_DATABASE_URL").unwrap_or_log();
+                    let db_pool = sqlx::PgPool::connect(&db_url).await.unwrap_or_log();
+                    let redis_pool = bb8_redis::bb8::Pool::builder()
+                        .build(
+                            bb8_redis::RedisConnectionManager::new(
+                                common::utils::get_env_var("REDIS_URL").unwrap_or_log(),
+                            )
+                            .unwrap_or_log(),
+                        )
+                        .await
+                        .unwrap_or_log();
+                    let redis_pool = common::RedisPool(redis_pool);
+                    let sw = connect::Switchboard::default();
+                    let cx = Context {
+                        config,
+                        db: qtrunk_api::Db::Pg { db_pool },
+                        redis: redis_pool,
+                        sw,
+                    };
+                    let cx = std::sync::Arc::new(cx);
+                    tokio::spawn(connect::start_switchboard(cx.clone()));
+                    axum::Router::new().merge(qtrunk_api::router(cx))
+                })
                 .merge(
                     utoipa_swagger_ui::SwaggerUi::new("/swagger-ui")
                         .url(
@@ -108,19 +160,23 @@ fn main() {
                         ),
                 )
                 .layer(
-                    tower_http::trace::TraceLayer::new_for_http()
-                        .on_response(
-                            tower_http::trace::DefaultOnResponse::new()
-                                .level(tracing::Level::INFO)
-                                .latency_unit(tower_http::LatencyUnit::Micros),
-                        )
-                        .on_failure(
-                            tower_http::trace::DefaultOnFailure::new()
-                                .level(tracing::Level::ERROR)
-                                .latency_unit(tower_http::LatencyUnit::Micros),
-                        )
-                        .make_span_with(
-                            tower_http::trace::DefaultMakeSpan::new().include_headers(true),
+                    tower::ServiceBuilder::new()
+                        .sensitive_headers(vec![http::header::AUTHORIZATION, http::header::COOKIE])
+                        .layer(
+                            tower_http::trace::TraceLayer::new_for_http()
+                                .on_response(
+                                    tower_http::trace::DefaultOnResponse::new()
+                                        .level(tracing::Level::INFO)
+                                        .latency_unit(tower_http::LatencyUnit::Micros),
+                                )
+                                .on_failure(
+                                    tower_http::trace::DefaultOnFailure::new()
+                                        .level(tracing::Level::ERROR)
+                                        .latency_unit(tower_http::LatencyUnit::Micros),
+                                )
+                                .make_span_with(
+                                    tower_http::trace::DefaultMakeSpan::new().include_headers(true),
+                                ),
                         ),
                 );
 
@@ -134,9 +190,9 @@ fn main() {
                     })
                     .unwrap_or(8080),
             ));
-            tracing::info!("Server listening at {address:?}");
+            tracing::info!(%address, "server going online");
             axum::Server::bind(&address)
-                .serve(app.into_make_service())
+                .serve(app.into_make_service_with_connect_info::<std::net::SocketAddr>())
                 .await
         })
         .unwrap_or_log()

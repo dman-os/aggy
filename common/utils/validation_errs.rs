@@ -140,11 +140,11 @@ impl std::error::Error for ValidationErrors {
     }
 }
 
-impl From<validator::ValidationErrors> for ValidationErrors
-{
+impl From<validator::ValidationErrors> for ValidationErrors {
     fn from(value: validator::ValidationErrors) -> Self {
         Self(
-            value.into_errors()
+            value
+                .into_errors()
                 .into_iter()
                 .map(|(key, val)| (key, ValidationErrorsKind::from(val)))
                 .collect(),

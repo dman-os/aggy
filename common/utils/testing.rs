@@ -12,11 +12,15 @@ pub fn setup_tracing() -> eyre::Result<()> {
         std::env::set_var("RUST_LOG_TEST", "info");
     }
 
-    tracing_subscriber::fmt()
-        // .pretty()
-        .compact()
-        .with_env_filter(tracing_subscriber::EnvFilter::from_env("RUST_LOG_TEST"))
-        .with_timer(tracing_subscriber::fmt::time::uptime())
+    use tracing_subscriber::prelude::*;
+    tracing_subscriber::registry()
+        .with(tracing_subscriber::EnvFilter::from_env("RUST_LOG_TEST"))
+        .with(tracing_subscriber::EnvFilter::from_default_env())
+        .with(
+            tracing_subscriber::fmt::layer()
+                .compact()
+                .with_timer(tracing_subscriber::fmt::time::uptime()),
+        )
         .try_init()
         .map_err(|err| eyre::eyre!(err))?;
 

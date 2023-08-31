@@ -35,25 +35,15 @@ pub fn setup_tracing() -> eyre::Result<()> {
         std::env::set_var("RUST_LOG", "info");
     }
 
-    /*
     use tracing_subscriber::prelude::*;
-    tracing::subscriber::set_global_default(
-        tracing_subscriber::registry()
-            .with(tracing_error::ErrorLayer::default())
-            .with(
-                tracing_subscriber::fmt()
-                    // .pretty()
-                    // .compact()
-                    .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
-                    .with_timer(tracing_subscriber::fmt::time::uptime()),
-            ),
-    );
-     */
-    tracing_subscriber::fmt()
-        // .pretty()
-        .compact()
-        .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
-        .with_timer(tracing_subscriber::fmt::time::uptime())
+    tracing_subscriber::registry()
+        .with(tracing_error::ErrorLayer::default())
+        .with(tracing_subscriber::EnvFilter::from_default_env())
+        .with(
+            tracing_subscriber::fmt::layer()
+                .compact()
+                .with_timer(tracing_subscriber::fmt::time::uptime()),
+        )
         .try_init()
         .map_err(|err| eyre::eyre!(err))?;
 
