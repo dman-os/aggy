@@ -11,7 +11,7 @@ fn validate_request(
     req: &Request,
 ) -> Result<
     (
-        Vec<u8>,
+        [u8; 32],
         k256::schnorr::VerifyingKey,
         k256::schnorr::Signature,
     ),
@@ -39,7 +39,7 @@ fn validate_request(
         return Err(issues);
     }*/
 
-    let id_bytes = crate::event::id_for_event(
+    let (id_bytes, json_bytes) = crate::event::id_for_event(
         req.pubkey.as_str(),
         req.created_at,
         req.kind,
@@ -106,8 +106,9 @@ fn validate_request(
             k256::schnorr::Signature::try_from(&buf[..])
                 .map_err(|err| eyre::eyre!("error converting bytes to signature: {err}"))
         }) {
-        Ok(value) if pubkey.verify(&id_bytes[..], &value).is_ok() => value,
-        _ => {
+        Ok(value) if pubkey.verify(&json_bytes[..], &value).is_ok() => value,
+        err => {
+            error!(?err, "sig fail");
             let mut issues = validator::ValidationErrors::new();
             issues.add(
                 "sig",
@@ -151,12 +152,12 @@ pub struct Error {
 pub enum ErrorKind {
     #[error("duplicate: event already recieved")]
     Duplicate,
-    #[error("invalid: {issues}")]
+    #[error("invalid:{issues}")]
     InvalidInput {
         #[from]
         issues: ValidationErrors,
     },
-    #[error("error: internal server error: {message}")]
+    #[error("error:internal: {message}")]
     Internal { message: String },
 }
 
@@ -209,7 +210,7 @@ INSERT INTO public.events (
     ,$7
 )
                 "#,
-                    &id_bytes,
+                    &id_bytes[..],
                     &pubkey.to_bytes()[..],
                     request.created_at,
                     request.kind as i32,
@@ -309,6 +310,7 @@ mod tests {
         validate,
         (request, err_field),
         {
+            common::utils::testing::setup_tracing_once();
             match crate::event::create::validate_request(&request) {
                 Ok(_) => {
                     if let Some(err_field) = err_field {
@@ -316,7 +318,7 @@ mod tests {
                     }
                 }
                 Err(err) => {
-                    let err_field = err_field.expect("unexpected validation failure");
+                    let err_field = err_field.expect_or_log("unexpected validation failure");
                     if !err.field_errors().contains_key(&err_field) {
                         panic!("validation didn't fail on expected field: {err_field}, {err:?}");
                     }
@@ -326,6 +328,11 @@ mod tests {
     }
 
     validate! {
+        is_upto_spec: (
+            serde_json::from_str(r#"{"id":"4d84fae57fa93c836f161e75e404f6e489fb6c9737cc18cc0f757b7f3cacbaa6","pubkey":"b021c176157909a4515e3a182d92c17c28c62c9304974d944e49da562888a4b0","created_at":1642760731,"kind":2,"tags":[],"content":"wss://rsslay.fiatjaf.com","sig":"bdc8f2a7a731328bb002dae805ff1b21b1a175e48693e4d2c8fbc97f50fff506cd0f0dda8f6792b3d0ded88219211ed3161a36e86827c06ceb7becdba2008977"}"#)
+                .unwrap(),
+            Option::<&str>::None,
+        ),
         helper_fix_id_and_sig_works: (
             fix_id_and_sig(
                 Request {

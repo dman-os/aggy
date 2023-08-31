@@ -63,7 +63,7 @@ pub async fn start_switchboard(cx: SharedContext) -> eyre::Result<()> {
     let mut stream = conn.into_on_message();
     while let Some(msg) = stream.next().await {
         let event: Event = msg.get_payload().unwrap_or_log();
-        info!(?event, "event recieved for switiching");
+        trace!(?event, "event recieved for switiching");
         // FIXME: stress test this
         let clients = cx.sw.clients.read().await;
         clients
@@ -78,7 +78,7 @@ pub async fn start_switchboard(cx: SharedContext) -> eyre::Result<()> {
                         if res.is_err() {
                             break;
                         }
-                        info!(?event.id, ?client.id, ?filter, "event sent to client according to filter");
+                        trace!(%event.id, %client.id, ?filter, "event sent to client according to filter");
                     }
                 }
             })
@@ -102,13 +102,18 @@ pub async fn handler(
 
 #[tracing::instrument(skip(cx, socket))]
 async fn handle_client(cx: SharedContext, socket: WebSocket, addr: std::net::SocketAddr) {
+    let id = Uuid::new_v4();
     let connected_at = OffsetDateTime::now_utc();
+    trace!(
+        %id,
+        %connected_at,
+        "client connected"
+    );
     // the web socket pipes
     let (mut ws_tx, mut ws_rx) = socket.split();
     // the switchboard pipes
     let (sw_tx, mut sw_rx) = tokio::sync::mpsc::channel::<Value>(32);
     let (close_tx, mut close_rx) = tokio::sync::mpsc::channel::<(u16, String)>(1);
-    let id = Uuid::new_v4();
     {
         let mut clients = cx.sw.clients.write().await;
         clients.insert(
@@ -169,7 +174,7 @@ async fn handle_client(cx: SharedContext, socket: WebSocket, addr: std::net::Soc
                                 "unexpected msg recieved: invalid EVENT msg {msg:?} | {err}"
                             )
                         })?;
-                        info!(?event, "client sent Event");
+                        trace!(?event, "client sent Event");
                         let res = crate::event::create::CreateEvent.handle(&cx, event).await;
                         let res = match res {
                             Ok(ok) => ok.to_nostr_ok(),
@@ -213,7 +218,7 @@ async fn handle_client(cx: SharedContext, socket: WebSocket, addr: std::net::Soc
                         let mut subs = client.subs.write().await;
 
                         let sub_id = CHeapStr::new(sub_id.to_string());
-                        info!(?sub_id, ?filters, "client created subscription");
+                        trace!(%sub_id, ?filters, "client created subscription");
                         if let Some(sub) = subs.iter_mut().find(|sub| sub.id == sub_id) {
                             sub.filters = filters;
                         } else {
@@ -240,7 +245,7 @@ async fn handle_client(cx: SharedContext, socket: WebSocket, addr: std::net::Soc
                                 break;
                             }
                         }
-                        info!(sub_id, found, "client closed subscription");
+                        trace!(%sub_id, found, "client closed subscription");
                         if !found {
                             sw_tx
                                 .send(json!([
@@ -261,7 +266,7 @@ async fn handle_client(cx: SharedContext, socket: WebSocket, addr: std::net::Soc
         res = (&mut tx_task) => {
             match res {
                 Ok(()) => {},
-                Err(err) => error!(?err, ?id, ?addr, "error in client send loop"),
+                Err(err) => error!(%err, %id, %addr, "error in client send loop"),
             }
             rx_task.abort();
         }
@@ -282,12 +287,12 @@ async fn handle_client(cx: SharedContext, socket: WebSocket, addr: std::net::Soc
         let mut clients = cx.sw.clients.write().await;
         let client = clients.remove(&id).unwrap_or_log();
         let subs = client.subs.read().await;
-        info!(
-            ?id,
-            ?connected_at,
+        trace!(
+            %id,
+            %connected_at,
             sub_count = subs.len(),
             "client disconnected"
-        )
+        );
     }
 }
 

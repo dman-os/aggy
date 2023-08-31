@@ -44,8 +44,6 @@ pub mod utils;
 
 // use crate::utils::*;
 
-use utoipa::openapi;
-
 #[derive(Debug)]
 pub struct Config {
     pub pass_salt_hash: Vec<u8>,
@@ -92,6 +90,8 @@ pub fn router(state: SharedContext) -> axum::Router {
         .with_state(state)
 }
 
+/*
+use utoipa::openapi;
 pub struct ApiDoc;
 impl utoipa::OpenApi for ApiDoc {
     fn openapi() -> openapi::OpenApi {
@@ -144,7 +144,7 @@ impl utoipa::OpenApi for ApiDoc {
         }
         openapi
     }
-}
+}*/
 
 #[async_trait::async_trait]
 pub trait Client {}

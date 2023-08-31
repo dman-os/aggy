@@ -38,6 +38,7 @@ dependencies = [
  "deps",
  "dylink",
  "epigram_api",
+ "qtrunk_api",
  "shadow-rs",
  "sqlx",
 ]

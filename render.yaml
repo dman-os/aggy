@@ -13,8 +13,12 @@ services:
         sync: false
       - key: EPIGRAM_DATABASE_URL
         sync: false
+      - key: QTRUNK_DATABASE_URL
+        sync: false
       - key: SERVICE_SECRET
         sync: false
+      - key: REDIS_PUBSUB_NOSTR_HOSE
+        value: nostr_evt_hose
       - key: AUTH_TOKEN_LIFESPAN_SECS
         value: 604800
       - key: WEB_SESSION_LIFESPAN_SECS
