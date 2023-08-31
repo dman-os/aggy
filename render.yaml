@@ -1,4 +1,11 @@
 services:
+  - type: redis
+    name: redis01
+    ipAllowList: # required - allow external connections from only these CIDR blocks
+      - source: 0.0.0.0/0
+        description: everyone
+    plan: free
+    # region: frankfurt
   # A Docker web service
   - type: web
     name: aggynfrens
@@ -17,6 +24,11 @@ services:
         sync: false
       - key: SERVICE_SECRET
         sync: false
+      - key: REDIS_URL
+        fromService:
+          type: redis01
+          name: lightning
+          property: connectionString
       - key: REDIS_PUBSUB_NOSTR_HOSE
         value: nostr_evt_hose
       - key: AUTH_TOKEN_LIFESPAN_SECS
