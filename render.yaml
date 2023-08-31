@@ -26,8 +26,8 @@ services:
         sync: false
       - key: REDIS_URL
         fromService:
-          type: redis01
-          name: lightning
+          type: redis
+          name: redis01
           property: connectionString
       - key: REDIS_PUBSUB_NOSTR_HOSE
         value: nostr_evt_hose
