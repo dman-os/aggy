@@ -17,7 +17,7 @@ jobs:
           -v ${{ github.workspace }}:/flyway/conf:ro
           -v ${{ github.workspace }}/aggy_api/migrations:/flyway/sql:ro
           -e FLYWAY_URL
-          flyway/flyway:9.18-alpine 
+          flyway/flyway:9.21-alpine 
           migrate -X
   migrate-epigram-postgres:
     name: Apply migrations for the epigram db
@@ -33,5 +33,21 @@ jobs:
           -v ${{ github.workspace }}:/flyway/conf:ro
           -v ${{ github.workspace }}/epigram_api/migrations:/flyway/sql:ro
           -e FLYWAY_URL
-          flyway/flyway:9.18-alpine 
+          flyway/flyway:9.21-alpine 
+          migrate -X
+  migrate-qtrunk-postgres:
+    name: Apply migrations for the qtrunk db
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 5
+    env:
+      FLYWAY_URL: jdbc:postgresql://${{ vars.QTRUNK_PG_HOST }}:${{ vars.QTRUNK_PG_PORT }}/${{ vars.QTRUNK_PG_DB }}?user=${{ vars.QTRUNK_PG_USER }}&password=${{ secrets.QTRUNK_PG_PASS }}&sslmode=require
+    steps:
+      - uses: actions/checkout@v3
+      - run: >-
+          docker run --rm
+          -v ${{ github.workspace }}:/flyway/conf:ro
+          -v ${{ github.workspace }}/qtrunk_api/migrations:/flyway/sql:ro
+          -e FLYWAY_URL
+          flyway/flyway:9.21-alpine 
           migrate -X
