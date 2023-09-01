@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nDELETE \n    FROM \n        public.events \n    WHERE \n        kind = $1 \n        AND (\n            tags @? '$ ? (@[0] == \"d\" && @[1] == \"\")'\n            OR tags @? '$ ? (@[0] == \"d\" && @.size() == 1)'\n            OR NOT tags @? '$ ? (@[0] == \"d\")'\n        )\n                                ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "9247e1eee00c112d35f17591358d4033f63552a11d96aee1c99a85b851eb0309"
+}

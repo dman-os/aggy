@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use deps::redis::FromRedisValue;
 use serde_json::Value;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(crate = "serde")]
 pub struct Event {
     pub id: String,

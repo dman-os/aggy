@@ -1,4 +1,8 @@
 use crate::interlude::*;
+// TODO
+// - The limit property of a filter is only valid for the initial query and MUST
+//   be ignored afterwards. When limit: n is present it is assumed that the events
+//   returned in the initial query will be the last n events ordered by the created_at.
 
 use super::{Event, Filter};
 
@@ -165,7 +169,7 @@ fn pg_query(request: &Request) -> Result<(String, sqlx::postgres::PgArguments), 
                             .fold("true".to_string(), |mut acc, val| {
                                 acc.push_str(" AND (");
                                 acc.push_str(&val[..]);
-                                acc.push_str(")");
+                                acc.push(')');
                                 acc
                             }),
                     )
@@ -183,7 +187,7 @@ fn pg_query(request: &Request) -> Result<(String, sqlx::postgres::PgArguments), 
                     .fold("true".to_string(), |mut acc, val| {
                         acc.push_str(" AND (");
                         acc.push_str(&val[..]);
-                        acc.push_str(")");
+                        acc.push(')');
                         acc
                     })
             })
@@ -194,7 +198,7 @@ fn pg_query(request: &Request) -> Result<(String, sqlx::postgres::PgArguments), 
         .fold("WHERE false".to_string(), |mut acc, val| {
             acc.push_str(" OR (");
             acc.push_str(&val[..]);
-            acc.push_str(")");
+            acc.push(')');
             acc
         });
 

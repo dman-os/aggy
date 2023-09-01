@@ -2,13 +2,15 @@
 
 ## To-do
 
+- [ ] FUll NIP-01 compliance
+- [ ] Handle `{"limit":0}`
 - [ ] Observability
 - [x] Comment counts
 - [ ] Markdown input and html sanitization
 - [ ] Stylization
   - [ ] Dark mode
 - [ ] Some policy when the API is unable to contact other services
-  - [ ] Attempt to recreate connections?
+  - [ ] Panic and kill the process
 - [ ] Auth
   - [ ] Redis session cache
     - [ ] Last seen at on sessions
@@ -17,18 +19,21 @@
   - [ ] Password reset
   - [ ] 2FA
   - [ ] SSO
-- [ ] Logging
-- [ ] Replace UUIDs with HashIDs for user id?
 - [ ] Use camel case error field codes in ValidationErrors
 
 - [ ] Consider SurrealDb
-- [ ] Conside shuttle.rs
+- [ ] Consider shuttle.rs
 
 - [x] Move to flywaydb for migrations
 
 ## design-doc
 
 ### Features
+
+#### Stretch goals
+
+- [ ] Modlog
+- [ ] Spec out APIs for epigram and doface
 
 ### Endpoints
 
@@ -60,5 +65,3 @@
 ### Upstream Issues
 
 - [Postgres CITEXT support for SQLX](https://github.com/launchbadge/sqlx/issues/295)
-- [envFile support for codelldb](https://github.com/vadimcn/vscode-lldb/issues/506)
-- [$ref support for utoipa](https://github.com/juhaku/utoipa/issues/242)

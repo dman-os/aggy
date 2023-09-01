@@ -168,6 +168,59 @@ impl Error {
     }
 }
 
+async fn pg_insert_event(
+    request: &Request,
+    id_bytes: &[u8],
+    pubkey_bytes: &[u8],
+    sig_bytes: &[u8],
+    executor: impl sqlx::PgExecutor<'_>,
+) -> Result<(), Error> {
+    sqlx::query!(
+        r#"
+INSERT INTO public.events (
+    id
+    ,pubkey
+    ,created_at
+    ,kind
+    ,tags
+    ,content
+    ,sig
+) VALUES
+(
+    $1 
+    ,$2
+    ,$3
+    ,$4
+    ,$5
+    ,$6
+    ,$7
+)
+                        "#,
+        id_bytes,
+        pubkey_bytes,
+        request.created_at,
+        request.kind as i32,
+        &json!(request.tags),
+        request.content.as_str(),
+        sig_bytes,
+    )
+    .execute(executor)
+    .await
+    .map(|_| ())
+    .map_err(|err| {
+        if let sqlx::Error::Database(boxed) = &err {
+            if let Some("events_pkey") = boxed.constraint() {
+                return ErrorKind::Duplicate;
+            }
+        }
+        panic!("db error: {err}");
+    })
+    .map_err(|kind| Error {
+        event_id: request.id.clone(),
+        kind,
+    })
+}
+
 #[async_trait::async_trait]
 impl Endpoint for CreateEvent {
     type Request = Request;
@@ -187,52 +240,105 @@ impl Endpoint for CreateEvent {
                 event_id: request.id.clone(),
                 kind: kind.into(),
             })?;
-        match &cx.db {
-            crate::Db::Pg { db_pool } => {
-                sqlx::query!(
-                    r#"
-INSERT INTO public.events (
-    id
-    ,pubkey
-    ,created_at
-    ,kind
-    ,tags
-    ,content
-    ,sig
-) VALUES
-(
-    $1 
-    ,$2
-    ,$3
-    ,$4
-    ,$5
-    ,$6
-    ,$7
-)
-                "#,
-                    &id_bytes[..],
-                    &pubkey.to_bytes()[..],
-                    request.created_at,
-                    request.kind as i32,
-                    &json!(request.tags),
-                    request.content.as_str(),
-                    &sig.to_bytes()[..],
-                )
-                .execute(db_pool)
-                .await
-                .map_err(|err| {
-                    if let sqlx::Error::Database(boxed) = &err {
-                        if let Some("events_pkey") = boxed.constraint() {
-                            return ErrorKind::Duplicate;
+        match request.kind {
+            // ephemeral
+            nn if (20000..30000).contains(&nn) => { /* not persisted */ }
+            // replaceable
+            nn if nn == 0 || nn == 3 || (10000..20000).contains(&nn) => match &cx.db {
+                crate::Db::Pg { db_pool } => {
+                    let mut tx = db_pool.begin().await.unwrap_or_log();
+                    sqlx::query!(
+                        r#"
+DELETE FROM public.events WHERE kind = $1
+                        "#,
+                        request.kind as i32,
+                    )
+                    .execute(&mut *tx)
+                    .await
+                    .unwrap_or_log();
+                    pg_insert_event(
+                        &request,
+                        &id_bytes[..],
+                        &pubkey.to_bytes()[..],
+                        &sig.to_bytes()[..],
+                        &mut *tx,
+                    )
+                    .await?;
+                    tx.commit().await.unwrap_or_log();
+                }
+            },
+            // parameterized replcable
+            nn if (30000..40000).contains(&nn) => {
+                let parameter = request
+                    .tags
+                    .iter()
+                    .find(|tag| matches!(tag.get(0).map(|st| &st[..]), Some("d")))
+                    .and_then(|tag| tag.get(1))
+                    .map(|st| &st[..]);
+                match &cx.db {
+                    crate::Db::Pg { db_pool } => {
+                        let mut tx = db_pool.begin().await.unwrap_or_log();
+                        match parameter {
+                            // handle empty param
+                            None | Some("") => {
+                                sqlx::query!(
+                                    r#"
+DELETE 
+    FROM 
+        public.events 
+    WHERE 
+        kind = $1 
+        AND (
+            tags @? '$ ? (@[0] == "d" && @[1] == "")'
+            OR tags @? '$ ? (@[0] == "d" && @.size() == 1)'
+            OR NOT tags @? '$ ? (@[0] == "d")'
+        )
+                                "#,
+                                    request.kind as i32,
+                                )
+                                .execute(&mut *tx)
+                                .await
+                                .map(|ok| info!(?ok, "empty param delete ok"))
+                                .unwrap_or_log();
+                            }
+                            Some(param) => {
+                                sqlx::query!(
+                                    r#"
+DELETE FROM public.events WHERE kind = $1 AND tags @> $2
+                                "#,
+                                    request.kind as i32,
+                                    json!([["d", param]])
+                                )
+                                .execute(&mut *tx)
+                                .await
+                                .unwrap_or_log();
+                            }
                         }
+                        pg_insert_event(
+                            &request,
+                            &id_bytes[..],
+                            &pubkey.to_bytes()[..],
+                            &sig.to_bytes()[..],
+                            &mut *tx,
+                        )
+                        .await?;
+                        tx.commit().await.unwrap_or_log();
                     }
-                    panic!("db error: {err}");
-                })
-                .map_err(|kind| Error {
-                    event_id: request.id.clone(),
-                    kind,
-                })?;
+                }
             }
+            // regular
+            _ => match &cx.db {
+                crate::Db::Pg { db_pool } => {
+                    pg_insert_event(
+                        &request,
+                        &id_bytes[..],
+                        &pubkey.to_bytes()[..],
+                        &sig.to_bytes()[..],
+                        db_pool,
+                    )
+                    .await?;
+                }
+            },
         }
         crate::connect::pub_event(cx, &request)
             .await
@@ -246,8 +352,10 @@ mod tests {
     use crate::interlude::*;
 
     use super::Request;
+    use crate::event::*;
 
     use crate::event::testing::*;
+
     const TEST_PRIVKEY: &str = "95dfc6261ec6c66b3ec68e1b019cf6420e1d676c29c1241ec5dea551ed89e338";
 
     fn fixture_request() -> Request {
@@ -278,8 +386,8 @@ mod tests {
         let pubkey = prikey.verifying_key().to_bytes();
         let pubkey = data_encoding::HEXLOWER.encode(&pubkey[..]);
 
-        // let created_at = OffsetDateTime::from_unix_timestamp(1_690_962_268).unwrap();
-        let created_at = OffsetDateTime::now_utc();
+        let created_at = OffsetDateTime::from_unix_timestamp(1_690_962_268).unwrap();
+        // let created_at = OffsetDateTime::now_utc();
 
         let tags = vec![
             vec!["author".to_string(), "bridget".to_string()],
@@ -406,7 +514,7 @@ mod tests {
 
     common::table_tests! {
         integ tokio,
-        (request_json, expected_json),
+        (request_json, expected_json, extra_ass),
         {
             let (mut testing, cx) = crate::utils::testing::cx_fn(common::function_full!()).await;
             {
@@ -420,10 +528,34 @@ mod tests {
                     ("expected", &expected_json),
                     ("response", &ok),
                 );
+                extra_ass(&cx).await;
             }
             testing.close().await;
         },
         multi_thread: true,
+    }
+
+    async fn test_replacement(cx: &Context, event: Event) {
+        let ok = crate::event::create::CreateEvent
+            .handle(cx, event.clone())
+            .await
+            .unwrap()
+            .to_nostr_ok();
+        check_json(
+            ("expected", &serde_json::json!(["OK", event.id, true,])),
+            ("response", &ok),
+        );
+        let filter =
+            serde_json::from_value(json!([{"kinds": [event.kind], "authors":[event.pubkey]}]))
+                .unwrap();
+        let ok = crate::event::list::ListEvents
+            .handle(cx, filter)
+            .await
+            .unwrap();
+        check_json(
+            ("expected", &serde_json::json!([event])),
+            ("response", &json!(ok)),
+        );
     }
 
     integ! {
@@ -431,13 +563,415 @@ mod tests {
             fixture_request_json(),
             serde_json::json!([
                 "OK", fixture_request().id, true
-            ])
+            ]),
+            |_|async{},
         ),
         rejects_duplicates: (
             json!(*EVENT_01),
             serde_json::json!([
                 "OK", EVENT_01_ID, false,
-            ])
+            ]),
+            |_|async{},
+        ),
+        kind_0_is_replaceable: (
+            json!(
+                fix_id_and_sig(
+                    Event {
+                        content: serde_json::to_string(&json!({"name": "bridget", "about":"nun assassin"})).unwrap(),
+                        kind: 0,
+                        ..fixture_request()
+                    },
+                    TEST_PRIVKEY,
+                )
+            ),
+            serde_json::json!([
+                "OK",
+                fix_id_and_sig(
+                    Event {
+                        content: serde_json::to_string(&json!({"name": "bridget", "about":"nun assassin"})).unwrap(),
+                        kind: 0,
+                        ..fixture_request()
+                    },
+                    TEST_PRIVKEY,
+                ).id,
+                true,
+            ]),
+            |cx| test_replacement(cx, fix_id_and_sig(
+                Event {
+                    content: "".into(),
+                    kind: 3,
+                    tags: vec![
+                        vec!["p".into(), EVENT_01.pubkey.clone(), "wss://relay.scuttlebut.com".into(), "sid".into()],
+                        vec!["p".into(), EVENT_02.pubkey.clone(), "wss://nostr.mastodon.social".into(), "tae".into()],
+                        vec!["p".into(), EVENT_04.pubkey.clone(), "wss://nr.matrix.org".into(), "vin".into()],
+                        vec!["p".into(), EVENT_05.pubkey.clone(), "wss://relay.signal.com".into(), "barb".into()],
+                    ],
+                    ..fixture_request()
+                },
+                TEST_PRIVKEY,
+            )),
+        ),
+        kind_3_is_replaceable: (
+            json!(
+                fix_id_and_sig(
+                    Event {
+                        content: "".into(),
+                        kind: 3,
+                        tags: vec![
+                            vec!["p".into(), EVENT_01.pubkey.clone(), "wss://relay.fb.com".into(), "sid".into()],
+                            vec!["p".into(), EVENT_02.pubkey.clone(), "wss://nostr.x.com".into(), "tae".into()],
+                            vec!["p".into(), EVENT_04.pubkey.clone(), "wss://nr.tumblr.com".into(), "vin".into()],
+                            vec!["p".into(), EVENT_05.pubkey.clone(), "wss://relay.telegram.com".into(), "barb".into()],
+                        ],
+                        ..fixture_request()
+                    },
+                    TEST_PRIVKEY,
+                )
+            ),
+            serde_json::json!([
+                "OK",
+                fix_id_and_sig(
+                    Event {
+                        content: "".into(),
+                        kind: 3,
+                        tags: vec![
+                            vec!["p".into(), EVENT_01.pubkey.clone(), "wss://relay.fb.com".into(), "sid".into()],
+                            vec!["p".into(), EVENT_02.pubkey.clone(), "wss://nostr.x.com".into(), "tae".into()],
+                            vec!["p".into(), EVENT_04.pubkey.clone(), "wss://nr.tumblr.com".into(), "vin".into()],
+                            vec!["p".into(), EVENT_05.pubkey.clone(), "wss://relay.telegram.com".into(), "barb".into()],
+                        ],
+                        ..fixture_request()
+                    },
+                    TEST_PRIVKEY,
+                ).id,
+                true,
+            ]),
+            |cx| test_replacement(cx, fix_id_and_sig(
+                Event {
+                    content: "".into(),
+                    kind: 3,
+                    tags: vec![
+                        vec!["p".into(), EVENT_01.pubkey.clone(), "wss://relay.fb.com".into(), "sid".into()],
+                        vec!["p".into(), EVENT_02.pubkey.clone(), "wss://nostr.x.com".into(), "tae".into()],
+                        vec!["p".into(), EVENT_04.pubkey.clone(), "wss://nr.tumblr.com".into(), "vin".into()],
+                        vec!["p".into(), EVENT_05.pubkey.clone(), "wss://relay.telegram.com".into(), "barb".into()],
+                    ],
+                    ..fixture_request()
+                },
+                TEST_PRIVKEY,
+            )),
+        ),
+        kinds_10k_are_replaceable: (
+            json!(
+                fix_id_and_sig(
+                    Event {
+                        content: "VezuSvWak++ASjFMRqBPWS3mK5pZ0vRLL325iuIL4S+r8n9z+DuMau5vMElz1tGC/UqCDmbzE2kwplafaFo/FnIZMdEj4pdxgptyBV1ifZpH3TEF6OMjEtqbYRRqnxgIXsuOSXaerWgpi0pm+raHQPseoELQI/SZ1cvtFqEUCXdXpa5AYaSd+quEuthAEw7V1jP+5TDRCEC8jiLosBVhCtaPpLcrm8HydMYJ2XB6Ixs=?iv=/rtV49RFm0XyFEwG62Eo9A==".into(),
+                        kind: 10000,
+                        tags: vec![
+                            vec!["p".into(), "3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d".into()],
+                            vec!["p".into(), "32e1827635450ebb3c5a7d12c1f8e7b2b514439ac10a67eef3d9fd9c5c68e245".into()],
+                        ],
+                        ..fixture_request()
+                    },
+                    TEST_PRIVKEY,
+                )
+            ),
+            serde_json::json!([
+                "OK",
+                fix_id_and_sig(
+                    Event {
+                        content: "VezuSvWak++ASjFMRqBPWS3mK5pZ0vRLL325iuIL4S+r8n9z+DuMau5vMElz1tGC/UqCDmbzE2kwplafaFo/FnIZMdEj4pdxgptyBV1ifZpH3TEF6OMjEtqbYRRqnxgIXsuOSXaerWgpi0pm+raHQPseoELQI/SZ1cvtFqEUCXdXpa5AYaSd+quEuthAEw7V1jP+5TDRCEC8jiLosBVhCtaPpLcrm8HydMYJ2XB6Ixs=?iv=/rtV49RFm0XyFEwG62Eo9A==".into(),
+                        kind: 10000,
+                        tags: vec![
+                            vec!["p".into(), "3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d".into()],
+                            vec!["p".into(), "32e1827635450ebb3c5a7d12c1f8e7b2b514439ac10a67eef3d9fd9c5c68e245".into()],
+                        ],
+                        ..fixture_request()
+                    },
+                    TEST_PRIVKEY,
+                ).id,
+                true,
+            ]),
+            |cx| test_replacement(cx, fix_id_and_sig(
+                Event {
+                    content: "VezuSvWak++ASjFMRqBPWS3mK5pZ0vRLL325iuIL4S+r8n9z+DuMau5vMElz1tGC/UqCDmbzE2kwplafaFo/FnIZMdEj4pdxgptyBV1ifZpH3TEF6OMjEtqbYRRqnxgIXsuOSXaerWgpi0pm+raHQPseoELQI/SZ1cvtFqEUCXdXpa5AYaSd+quEuthAEw7V1jP+5TDRCEC8jiLosBVhCtaPpLcrm8HydMYJ2XB6Ixs=?iv=/rtV49RFm0XyFEwG62Eo9A==".into(),
+                    kind: 10000,
+                    tags: vec![
+                        vec!["p".into(), "32e1827635450ebb3c5a7d12c1f8e7b2b514439ac10a67eef3d9fd9c5c68e245".into()],
+                    ],
+                    ..fixture_request()
+                },
+                TEST_PRIVKEY,
+            )),
+        ),
+        kinds_20k_are_ephemeral: (
+            json!(
+                fix_id_and_sig(
+                    Event {
+                        content: "".into(),
+                        kind: 27235,
+                        tags: vec![
+                            vec!["u".into(), "https://aggy.news/aggy/api/v1/".into()],
+                            vec!["method".into(), "GET".into()]
+                        ],
+                        ..fixture_request()
+                    },
+                    TEST_PRIVKEY,
+                )
+            ),
+            serde_json::json!([
+                "OK",
+                fix_id_and_sig(
+                    Event {
+                        content: "".into(),
+                        kind: 27235,
+                        tags: vec![
+                            vec!["u".into(), "https://aggy.news/aggy/api/v1/".into()],
+                            vec!["method".into(), "GET".into()]
+                        ],
+                        ..fixture_request()
+                    },
+                    TEST_PRIVKEY,
+                ).id,
+                true,
+            ]),
+            |cx| Box::pin(async move {
+                let event = fix_id_and_sig(
+                    Event {
+                        content: "".into(),
+                        kind: 27235,
+                        tags: vec![
+                            vec!["u".into(), "https://aggy.news/aggy/api/v1/".into()],
+                            vec!["method".into(), "GET".into()]
+                        ],
+                        ..fixture_request()
+                    },
+                    TEST_PRIVKEY,
+                );
+                let filter = serde_json::from_value(json!([{"ids": [event.id] }]))
+                        .unwrap();
+                let ok = crate::event::list::ListEvents
+                    .handle(cx, filter)
+                    .await
+                    .unwrap();
+                check_json(
+                    ("expected", &serde_json::json!([])),
+                    ("response", &json!(ok)),
+                );
+            }),
+        ),
+        kinds_30k_are_replaceable: (
+            json!(
+                fix_id_and_sig(
+                    Event {
+                        content: "silly goosing".into(),
+                        kind: 30315,
+                        tags: vec![
+                            vec!["d".into(),"general".into()],
+                        ],
+                        ..fixture_request()
+                    },
+                    TEST_PRIVKEY,
+                )
+            ),
+            serde_json::json!([
+                "OK",
+                fix_id_and_sig(
+                    Event {
+                        content: "silly goosing".into(),
+                        kind: 30315,
+                        tags: vec![
+                            vec!["d".into(),"general".into()],
+                        ],
+                        ..fixture_request()
+                    },
+                    TEST_PRIVKEY,
+                ).id,
+                true,
+            ]),
+            |cx| test_replacement(cx, fix_id_and_sig(
+                Event {
+                    content: "hardcore silly goosing".into(),
+                    kind: 30315,
+                    tags: vec![
+                        vec!["d".into(),"general".into()],
+                    ],
+                    ..fixture_request()
+                },
+                TEST_PRIVKEY,
+            )),
+        ),
+        kinds_30k_are_parameterized: (
+            json!(
+                fix_id_and_sig(
+                    Event {
+                        content: "silly goosing".into(),
+                        kind: 30315,
+                        tags: vec![
+                            vec!["d".into(),"general".into()],
+                        ],
+                        ..fixture_request()
+                    },
+                    TEST_PRIVKEY,
+                )
+            ),
+            serde_json::json!([
+                "OK",
+                fix_id_and_sig(
+                    Event {
+                        content: "silly goosing".into(),
+                        kind: 30315,
+                        tags: vec![
+                            vec!["d".into(), "general".into()],
+                        ],
+                        ..fixture_request()
+                    },
+                    TEST_PRIVKEY,
+                ).id,
+                true,
+            ]),
+            |cx| Box::pin(async move {
+                let event = fix_id_and_sig(
+                    Event {
+                        content: "silly goose blues".into(),
+                        kind: 30315,
+                        tags: vec![
+                            vec!["d".into(),"music".into()],
+                            vec![
+                                "expiration".into(),
+                                (fixture_request().created_at.unix_timestamp() + (4 * 60)).to_string()
+                            ]
+                        ],
+                        ..fixture_request()
+                    },
+                    TEST_PRIVKEY,
+                );
+                let ok = crate::event::create::CreateEvent
+                    .handle(cx, event.clone())
+                    .await
+                    .unwrap()
+                    .to_nostr_ok();
+                check_json(
+                    ("expected", &serde_json::json!(["OK", event.id, true,])),
+                    ("response", &ok),
+                );
+                let filter =
+                    serde_json::from_value(json!([{"#d":["general"]}]))
+                        .unwrap();
+                let ok = crate::event::list::ListEvents
+                    .handle(cx, filter)
+                    .await
+                    .unwrap();
+                check_json(
+                    ("expected", &serde_json::json!([
+                        fix_id_and_sig(
+                            Event {
+                                content: "silly goosing".into(),
+                                kind: 30315,
+                                tags: vec![
+                                    vec!["d".into(),"general".into()],
+                                ],
+                                ..fixture_request()
+                            },
+                            TEST_PRIVKEY,
+                        ),
+                    ])),
+                    ("response", &json!(ok)),
+                );
+            }),
+        ),
+        kinds_30k_d_tag_value_optional: (
+            json!(
+                fix_id_and_sig(
+                    Event {
+                        content: "geccing rn".into(),
+                        kind: 35000,
+                        tags: vec![
+                            vec!["d".into()],
+                        ],
+                        ..fixture_request()
+                    },
+                    TEST_PRIVKEY,
+                )
+            ),
+            serde_json::json!([
+                "OK",
+                fix_id_and_sig(
+                    Event {
+                        content: "geccing rn".into(),
+                        kind: 35000,
+                        tags: vec![
+                            vec!["d".into()],
+                        ],
+                        ..fixture_request()
+                    },
+                    TEST_PRIVKEY,
+                ).id,
+                true,
+            ]),
+            |cx| test_replacement(cx, fix_id_and_sig(
+                Event {
+                    content: "no longer geccing".into(),
+                    kind: 35000,
+                    tags: vec![
+                        vec!["d".into()],
+                    ],
+                    ..fixture_request()
+                },
+                TEST_PRIVKEY,
+            )),
+        ),
+        kinds_30k_d_tag_value_empty_is_optional: (
+            json!(
+                fix_id_and_sig(
+                    Event {
+                        content: "geccing rn".into(),
+                        kind: 35000,
+                        tags: vec![
+                            vec!["d".into()],
+                        ],
+                        ..fixture_request()
+                    },
+                    TEST_PRIVKEY,
+                )
+            ),
+            serde_json::json!([
+                "OK",
+                fix_id_and_sig(
+                    Event {
+                        content: "geccing rn".into(),
+                        kind: 35000,
+                        tags: vec![
+                            vec!["d".into()],
+                        ],
+                        ..fixture_request()
+                    },
+                    TEST_PRIVKEY,
+                ).id,
+                true,
+            ]),
+            |cx| Box::pin(async move {
+                test_replacement(cx, fix_id_and_sig(
+                    Event {
+                        content: "no longer geccing".into(),
+                        kind: 35000,
+                        tags: vec![
+                            vec!["d".into(), "".into()],
+                        ],
+                        ..fixture_request()
+                    },
+                    TEST_PRIVKEY,
+                )).await;
+                test_replacement(cx, fix_id_and_sig(
+                    Event {
+                        content: "geccing super hard now".into(),
+                        kind: 35000,
+                        tags: vec![],
+                        ..fixture_request()
+                    },
+                    TEST_PRIVKEY,
+                )).await;
+            }),
         ),
     }
 }

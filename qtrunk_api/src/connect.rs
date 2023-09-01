@@ -358,15 +358,12 @@ mod tests {
                     tokio_tungstenite::connect_async("ws://127.0.0.1:19000")
                         .await
                         .map_err(|err| {
-                            match &err {
-                                tokio_tungstenite::tungstenite::Error::Http(err) => {
-                                    if let Some(body) = err.body() {
-                                        let body = String::from_utf8(body.clone());
-                                        error!(?body, ?err);
-                                    }
+                            if let tokio_tungstenite::tungstenite::Error::Http(err) = &err {
+                                if let Some(body) = err.body() {
+                                    let body = String::from_utf8(body.clone());
+                                    error!(?body, ?err);
                                 }
-                                _ => {}
-                            };
+                            }
                             err
                         })?;
                 info!(?response);

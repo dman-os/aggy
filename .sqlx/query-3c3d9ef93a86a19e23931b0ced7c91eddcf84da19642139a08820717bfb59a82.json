@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO public.events (\n    id\n    ,pubkey\n    ,created_at\n    ,kind\n    ,tags\n    ,content\n    ,sig\n) VALUES\n(\n    $1 \n    ,$2\n    ,$3\n    ,$4\n    ,$5\n    ,$6\n    ,$7\n)\n                        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Bytea",
+        "Bytea",
+        "Timestamptz",
+        "Int4",
+        "Jsonb",
+        "Text",
+        "Bytea"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "3c3d9ef93a86a19e23931b0ced7c91eddcf84da19642139a08820717bfb59a82"
+}

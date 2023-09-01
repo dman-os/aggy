@@ -221,8 +221,7 @@ fn gen_events() {
         .chain(
             replies
                 .into_iter()
-                .map(|seed| seed_to_event(seed, Some(&id[..])))
-                .flatten(),
+                .flat_map(|seed| seed_to_event(seed, Some(&id[..]))),
         )
         .collect()
     }
@@ -283,8 +282,7 @@ fn gen_events() {
         },
     ]
     .into_iter()
-    .map(|seed| seed_to_event(seed, None))
-    .flatten()
+    .flat_map(|seed| seed_to_event(seed, None))
     .collect::<Vec<_>>();
     for Event {
         id,
