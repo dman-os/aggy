@@ -2,15 +2,13 @@
 
 ## To-do
 
-- [ ] FUll NIP-01 compliance
-- [ ] Handle `{"limit":0}`
 - [ ] Observability
 - [x] Comment counts
 - [ ] Markdown input and html sanitization
 - [ ] Stylization
   - [ ] Dark mode
 - [ ] Some policy when the API is unable to contact other services
-  - [ ] Panic and kill the process
+  - [ ] Panic and kill the process?
 - [ ] Auth
   - [ ] Redis session cache
     - [ ] Last seen at on sessions
@@ -25,6 +23,11 @@
 - [ ] Consider shuttle.rs
 
 - [x] Move to flywaydb for migrations
+
+- qtrunk
+  - [ ] FUll NIP-01 compliance
+  - [ ] Handle `{"limit":0}`
+  - [ ] Limit max event size
 
 ## design-doc
 

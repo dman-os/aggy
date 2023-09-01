@@ -223,7 +223,7 @@ SELECT
     ,encode(sig, 'hex') as "sig"
 FROM events
 {where_clause}
-ORDER BY created_at
+ORDER BY created_at DESC, id ASC
 LIMIT {limit}
         "#,
         ),
@@ -335,19 +335,19 @@ mod tests {
             json!([{
                 "since":  EVENT_03.created_at.unix_timestamp()
             }]),
-            json!([*EVENT_04, *EVENT_05])
+            json!([*EVENT_05, *EVENT_04, ])
         ),
         supports_until_filter: (
             json!([{
                 "until":  EVENT_03.created_at.unix_timestamp()
             }]),
-            json!([*EVENT_01, *EVENT_02])
+            json!([*EVENT_02, *EVENT_01, ])
         ),
         supports_tag_filter: (
             json!([{
                 "#e": [EVENT_03.id]
             }]),
-            json!([*EVENT_04, *EVENT_05])
+            json!([*EVENT_05, *EVENT_04])
         ),
     }
 }

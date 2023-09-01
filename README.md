@@ -12,7 +12,7 @@ As far as it's concerned, the world's a tree of crypto-signed messages and all r
 This *will* be how upvotes/flags will be implemented for `aggy_api` posts. 
 Yes, crypto-signed. 
 Pubkeys and everything. 
-`epigram` and `doface` will support different kinds of pubkeys and signitures (think multiformats) but they'll primarily be of secp256k1 Schnorr as [nostr](https://github.com/nostr-protocol/nostr) events will the primary input/ingest vector of the system.
+`epigram` and `doface` will support different kinds of pubkeys and signitures (think multiformats) but they'll primarily be of secp256k1 Schnorr as [Nostr](https://github.com/nostr-protocol/nostr) events will the primary input/ingest vector of the system.
 To this end exists `qtrunk_api`, a dumb nostr relay implementation for this usecase.
 
 All in all, `epigram`, `doface` and even `aggy` itself can be considered secondary cache layers for Nostr even if they expose separate REST interfaces and are generally agnostic of it.
